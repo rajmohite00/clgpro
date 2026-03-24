@@ -16,11 +16,36 @@ class ProfileScreen extends StatelessWidget {
   final bool isTab;
   const ProfileScreen({super.key, this.isTab = false});
 
-  Future<void> _logout(BuildContext context) async {
+  Future<void> _logout(BuildContext context, bool isHindi) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+        title: Text(tr('Confirm Logout', isHindi), style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(tr('Are you sure you want to log out?', isHindi), style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('Cancel', isHindi), style: GoogleFonts.inter(color: Theme.of(context).colorScheme.primary))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(tr('Log Out', isHindi), style: GoogleFonts.inter(color: Colors.white)),
+          )
+        ],
+      )
+    );
+
+    if (confirm != true) return;
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     
     if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(tr('Logged out successfully', isHindi)),
+      backgroundColor: Colors.green,
+    ));
+
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const OnboardingScreen()),
@@ -153,7 +178,7 @@ class ProfileScreen extends StatelessWidget {
                         StaggeredListItem(
                           index: 4,
                           child: AnimatedScaleButton(
-                            onTap: () => _logout(context),
+                            onTap: () => _logout(context, settings.isHindi),
                             child: SizedBox(
                               width: double.infinity,
                               child: Container(

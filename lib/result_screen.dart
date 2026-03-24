@@ -5,10 +5,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:printing/printing.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'utils/animations.dart';
 import 'providers/settings_provider.dart';
+import 'providers/document_provider.dart';
 
 class ResultScreen extends StatelessWidget {
   final Map<String, dynamic> resultData;
@@ -206,6 +208,78 @@ class ResultScreen extends StatelessWidget {
                   ],
                 );
 
+                // Uploaded Images Preview
+                final docProvider = Provider.of<DocumentProvider>(context, listen: false);
+                final imagePreview = docProvider.selectedFiles.isEmpty
+                    ? const SizedBox.shrink()
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            tr('Uploaded Documents', isHindi),
+                            style: GoogleFonts.inter(fontSize: 20.sp, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                          ),
+                          SizedBox(height: 16.h),
+                          SizedBox(
+                            height: 120.h,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: docProvider.selectedFiles.length,
+                              separatorBuilder: (_, __) => SizedBox(width: 16.w),
+                              itemBuilder: (context, index) {
+                                final file = docProvider.selectedFiles[index];
+                                return GestureDetector(
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (_) => Dialog(
+                                        backgroundColor: Colors.transparent,
+                                        insetPadding: EdgeInsets.zero,
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            InteractiveViewer(
+                                              minScale: 0.5,
+                                              maxScale: 4.0,
+                                              child: file.isPdf
+                                                  ? Center(child: Icon(Icons.picture_as_pdf, size: 80.sp, color: Colors.white))
+                                                  : Image.file(File(file.path), fit: BoxFit.contain),
+                                            ),
+                                            Positioned(
+                                              top: 40.h,
+                                              right: 20.w,
+                                              child: IconButton(
+                                                icon: Icon(Icons.close, color: Colors.white, size: 30.sp),
+                                                onPressed: () => Navigator.pop(context),
+                                              ),
+                                            )
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    width: 100.w,
+                                    decoration: BoxDecoration(
+                                      color: theme.cardColor,
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: file.isPdf
+                                        ? Center(child: Icon(Icons.picture_as_pdf, color: colorScheme.primary, size: 40.sp))
+                                        : Image.file(File(file.path), fit: BoxFit.cover),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          SizedBox(height: 40.h),
+                        ],
+                      );
+
+                final int fraudScore = resultData['fraudScore'] ?? 0;
+
                 if (isDesktop) {
                   return Center(
                     child: ConstrainedBox(
@@ -221,6 +295,8 @@ class ResultScreen extends StatelessWidget {
                                 child: Column(
                                   children: [
                                     statusBanner,
+                                    SizedBox(height: 24.h),
+                                    _buildFraudMeter(context, fraudScore),
                                     SizedBox(height: 40.h),
                                     actionButtons,
                                   ],
@@ -231,7 +307,13 @@ class ResultScreen extends StatelessWidget {
                             Expanded(
                               flex: 2,
                               child: SingleChildScrollView(
-                                child: detailedComparisons,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    imagePreview,
+                                    detailedComparisons,
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -247,7 +329,10 @@ class ResultScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       statusBanner,
+                      SizedBox(height: 32.h),
+                      _buildFraudMeter(context, fraudScore),
                       SizedBox(height: 40.h),
+                      imagePreview,
                       detailedComparisons,
                       SizedBox(height: 48.h),
                       actionButtons,
@@ -257,6 +342,127 @@ class ResultScreen extends StatelessWidget {
               },
             ),
           ),
+      ),
+    );
+  }
+
+  Widget _buildFraudMeter(BuildContext context, int score) {
+    final settings = Provider.of<SettingsProvider>(context);
+    final isHindi = settings.isHindi;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    Color meterColor;
+    String meterLabel;
+    if (score <= 30) {
+      meterColor = Colors.green;
+      meterLabel = 'Low Risk';
+    } else if (score <= 70) {
+      meterColor = Colors.yellow.shade700;
+      meterLabel = 'Medium Risk';
+    } else {
+      meterColor = colorScheme.error;
+      meterLabel = 'High Risk';
+    }
+
+    return Container(
+      padding: EdgeInsets.all(24.w),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: colorScheme.onSurface.withOpacity(0.05)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            tr('Fraud Risk Score', isHindi),
+            style: GoogleFonts.inter(fontSize: 18.sp, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+          ),
+          SizedBox(height: 24.h),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 120.w,
+                height: 120.w,
+                child: CircularProgressIndicator(
+                  value: score / 100,
+                  strokeWidth: 12.w,
+                  backgroundColor: colorScheme.onSurface.withOpacity(0.1),
+                  valueColor: AlwaysStoppedAnimation<Color>(meterColor),
+                ),
+              ),
+              Column(
+                children: [
+                  Text(
+                    '$score%',
+                    style: GoogleFonts.inter(fontSize: 28.sp, fontWeight: FontWeight.bold, color: meterColor),
+                  ),
+                  Text(
+                    tr(meterLabel, isHindi),
+                    style: GoogleFonts.inter(fontSize: 12.sp, fontWeight: FontWeight.w600, color: meterColor),
+                  ),
+                ],
+              )
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  void _showCardOptions(BuildContext context, String field, String doc1Value, String doc2Value, String status) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
+    final String textToCopy = 'Field: $field\nDocument 1: $doc1Value\nDocument 2: $doc2Value\nStatus: $status';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 24.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(tr('Comparison Options', isHindi), style: GoogleFonts.inter(fontSize: 18.sp, fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+              SizedBox(height: 16.h),
+              ListTile(
+                leading: Icon(Icons.copy_rounded, color: colorScheme.primary),
+                title: Text(tr('Copy Details', isHindi), style: GoogleFonts.inter(color: colorScheme.onSurface)),
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: textToCopy));
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(tr('Copied to clipboard!', isHindi)),
+                    backgroundColor: Colors.green,
+                  ));
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.share_rounded, color: colorScheme.primary),
+                title: Text(tr('Share', isHindi), style: GoogleFonts.inter(color: colorScheme.onSurface)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Share.share(textToCopy);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.bookmark_border_rounded, color: colorScheme.primary),
+                title: Text(tr('Save Field', isHindi), style: GoogleFonts.inter(color: colorScheme.onSurface)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(tr('Field saved for reference.', isHindi)),
+                    backgroundColor: colorScheme.primary,
+                  ));
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -272,7 +478,12 @@ class ResultScreen extends StatelessWidget {
     else if (status == 'Partial') badgeColor = Colors.yellow.shade700;
     else badgeColor = colorScheme.error;
 
-    return Container(
+    return GestureDetector(
+      onLongPress: () {
+        HapticFeedback.lightImpact();
+        _showCardOptions(context, field, doc1Value, doc2Value, status);
+      },
+      child: Container(
       margin: EdgeInsets.only(bottom: 16.h),
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -339,6 +550,7 @@ class ResultScreen extends StatelessWidget {
             ),
           )
         ],
+      ),
       ),
     );
   }

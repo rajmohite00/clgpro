@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 import 'result_screen.dart';
 import 'utils/animations.dart';
 import 'providers/settings_provider.dart';
@@ -31,14 +34,62 @@ class _HistoryScreenState extends State<HistoryScreen> {
     super.dispose();
   }
 
+  Future<void> _deleteItem(int index, Map<String, dynamic> item) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> savedItems = prefs.getStringList('history_results') ?? [];
+    
+    savedItems.removeWhere((element) {
+      final map = jsonDecode(element) as Map<String, dynamic>;
+      return map['date'] == item['date'] && map['fraudScore'] == item['fraudScore'] && map['summary'] == item['summary'];
+    });
+    
+    await prefs.setStringList('history_results', savedItems);
+    setState(() {
+      _historyFuture = _fetchHistory();
+    });
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Item deleted successfully'), backgroundColor: Colors.redAccent),
+      );
+    }
+  }
+
+  Future<bool?> _showConfirmDialog(BuildContext context, String actionStr) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+        title: Text('Confirm $actionStr', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: Text('Are you sure you want to ${actionStr.toLowerCase()} this item?', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: actionStr == 'Delete' ? Colors.redAccent : Colors.blueAccent),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(actionStr, style: GoogleFonts.inter(color: Colors.white)),
+          )
+        ],
+      )
+    );
+  }
+
   Future<List<Map<String, dynamic>>> _fetchHistory() async {
-    // API mock: /get-history
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> savedItems = prefs.getStringList('history_results') ?? [];
+    
+    if (savedItems.isNotEmpty) {
+       return savedItems.map((item) => jsonDecode(item) as Map<String, dynamic>).toList();
+    }
+
+    // Default mock data if empty
     await Future.delayed(const Duration(milliseconds: 800));
     return [
-      {'date': '19 Mar 2026', 'status': 'Match', 'summary': 'Driver License & Passport Verification'},
-      {'date': '18 Mar 2026', 'status': 'Mismatch', 'summary': 'ID Card & Utility Bill Verification'},
-      {'date': '15 Mar 2026', 'status': 'Match', 'summary': 'Bank Statement Authentication'},
-      {'date': '12 Mar 2026', 'status': 'Match', 'summary': 'Tax API Data Verification'},
+      {'date': '19 Mar 2026', 'status': 'Match', 'summary': 'Driver License & Passport Verification', 'fraudScore': 15},
+      {'date': '18 Mar 2026', 'status': 'Mismatch', 'summary': 'ID Card & Utility Bill Verification', 'fraudScore': 85},
+      {'date': '15 Mar 2026', 'status': 'Match', 'summary': 'Bank Statement Authentication', 'fraudScore': 20},
+      {'date': '12 Mar 2026', 'status': 'Match', 'summary': 'Tax API Data Verification', 'fraudScore': 18},
     ];
   }
 
@@ -88,7 +139,33 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     future: _historyFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator(color: theme.primaryColor));
+                        return ListView.separated(
+                          padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 24.h),
+                          itemCount: 6,
+                          separatorBuilder: (_, __) => SizedBox(height: 16.h),
+                          itemBuilder: (context, index) {
+                            return StaggeredListItem(
+                              index: index,
+                              child: Container(
+                                height: 100.h,
+                                padding: EdgeInsets.all(20.w),
+                                decoration: BoxDecoration(
+                                  color: theme.cardColor.withOpacity(0.4),
+                                  borderRadius: BorderRadius.circular(16.r),
+                                  border: Border.all(color: colorScheme.onSurface.withOpacity(0.05), width: 1),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(width: 80.w, height: 14.h, decoration: BoxDecoration(color: theme.disabledColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4.r))),
+                                    SizedBox(height: 16.h),
+                                    Container(width: 200.w, height: 20.h, decoration: BoxDecoration(color: theme.disabledColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4.r))),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
                       } else if (snapshot.hasError) {
                         return Center(child: Text('Failed to load history', style: GoogleFonts.inter(color: theme.colorScheme.error)));
                       } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -117,16 +194,47 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                           return StaggeredListItem(
                             index: index + 1,
-                            child: AnimatedScaleButton(
+                            child: Dismissible(
+                              key: Key(item.hashCode.toString() + index.toString()),
+                              background: Container(
+                                alignment: Alignment.centerLeft,
+                                padding: EdgeInsets.symmetric(horizontal: 20.w),
+                                decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(16.r)),
+                                child: Icon(Icons.delete_outline, color: Colors.white, size: 28.sp),
+                              ),
+                              secondaryBackground: Container(
+                                alignment: Alignment.centerRight,
+                                padding: EdgeInsets.symmetric(horizontal: 20.w),
+                                decoration: BoxDecoration(color: Colors.blueAccent, borderRadius: BorderRadius.circular(16.r)),
+                                child: Icon(Icons.share_outlined, color: Colors.white, size: 28.sp),
+                              ),
+                              confirmDismiss: (direction) async {
+                                if (direction == DismissDirection.startToEnd) {
+                                  final confirm = await _showConfirmDialog(context, 'Delete');
+                                  return confirm ?? false;
+                                } else {
+                                  Share.share('Analysis Result: ${item['summary']} \nRisk Score: ${item['fraudScore']}% \nStatus: ${item['status']}\nVerified via AntiGravity');
+                                  return false;
+                                }
+                              },
+                              onDismissed: (direction) {
+                                if (direction == DismissDirection.startToEnd) {
+                                  _deleteItem(index, item);
+                                }
+                              },
+                              child: AnimatedScaleButton(
                               onTap: () {
-                                final mockResult = {
-                                  'status': item['status'],
-                                  'comparisons': [
-                                    {'field': 'Full Name', 'doc1': 'John Doe', 'doc2': isMatch ? 'John Doe' : 'Jonathan Doe', 'status': isMatch ? 'Match' : 'Mismatch'},
-                                    {'field': 'Date of Birth', 'doc1': '15-08-1990', 'doc2': '15-08-1990', 'status': 'Match'},
-                                    if (!isMatch) {'field': 'Address', 'doc1': '123 Fake Street, NY', 'doc2': '456 Different St, NY', 'status': 'Mismatch'},
-                                  ]
-                                };
+                                final mockResult = item['comparisons'] != null 
+                                  ? item 
+                                  : {
+                                      'status': item['status'],
+                                      'fraudScore': item['fraudScore'] ?? (isMatch ? 15 : 85),
+                                      'comparisons': [
+                                        {'field': 'Full Name', 'doc1': 'John Doe', 'doc2': isMatch ? 'John Doe' : 'Jonathan Doe', 'status': isMatch ? 'Match' : 'Mismatch'},
+                                        {'field': 'Date of Birth', 'doc1': '15-08-1990', 'doc2': '15-08-1990', 'status': 'Match'},
+                                        if (!isMatch) {'field': 'Address', 'doc1': '123 Fake Street, NY', 'doc2': '456 Different St, NY', 'status': 'Mismatch'},
+                                      ]
+                                    };
                                 Navigator.push(context, MaterialPageRoute(builder: (_) => ResultScreen(resultData: mockResult)));
                               },
                               child: Container(
@@ -175,6 +283,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   ],
                                 ),
                               ),
+                            ),
                             ),
                           );
                         },

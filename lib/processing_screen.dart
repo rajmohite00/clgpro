@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'result_screen.dart';
 import 'providers/settings_provider.dart';
 
@@ -18,6 +20,13 @@ class _ProcessingScreenState extends State<ProcessingScreen> with SingleTickerPr
   late AnimationController _controller;
   bool _hasError = false;
   String _errorMessage = '';
+
+  int _currentStepIndex = 0;
+  final List<String> _steps = [
+    'Scanning document...',
+    'Extracting data...',
+    'Analyzing authenticity...'
+  ];
 
   @override
   void initState() {
@@ -40,23 +49,39 @@ class _ProcessingScreenState extends State<ProcessingScreen> with SingleTickerPr
   Future<void> _startAnalysis() async {
     setState(() {
       _hasError = false;
+      _currentStepIndex = 0;
     });
 
     try {
-      // API call placeholder (/analyze-docs)
-      // Throw random timeout occasionally for realistic testing?
-      // In production, real HTTP calls happen here.
-      await Future.delayed(const Duration(seconds: 4));
+      // Step 1
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (!mounted) return;
+      setState(() => _currentStepIndex = 1);
       
-      // We force a specific response for demonstration according to requirements.
+      // Step 2
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (!mounted) return;
+      setState(() => _currentStepIndex = 2);
+
+      // Step 3
+      await Future.delayed(const Duration(milliseconds: 1000));
+      
+      // Generate random mock data
+      final int fraudScore = 15 + (DateTime.now().millisecond % 85);
+      final bool isMatch = fraudScore <= 30; // 0-30 = Green (Match), >30 = Yellow/Red (Mismatch)
+      final dateStr = DateTime.now().toString().split(' ')[0];
+
       final mockResult = {
-        'status': 'Mismatch', // Set to 'Match' to see success layout
+        'date': dateStr,
+        'status': isMatch ? 'Match' : 'Mismatch',
+        'fraudScore': fraudScore,
+        'summary': 'Driver License & Passport Verification',
         'comparisons': [
           {
             'field': 'Full Name',
             'doc1': 'John Doe',
-            'doc2': 'Johnathan Doe',
-            'status': 'Partial'
+            'doc2': isMatch ? 'John Doe' : 'Jonathan Doe',
+            'status': isMatch ? 'Match' : 'Partial'
           },
           {
             'field': 'Date of Birth',
@@ -65,13 +90,19 @@ class _ProcessingScreenState extends State<ProcessingScreen> with SingleTickerPr
             'status': 'Match'
           },
           {
-            'field': 'Address',
-            'doc1': '123 Fake Street, NY',
-            'doc2': '456 Different St, NY',
-            'status': 'Mismatch'
+            'field': 'ID Number',
+            'doc1': 'A123456789',
+            'doc2': isMatch ? 'A123456789' : 'B987654321',
+            'status': isMatch ? 'Match' : 'Mismatch'
           },
         ]
       };
+
+      // Save to SharedPreferences history
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      List<String> historyList = prefs.getStringList('history_results') ?? [];
+      historyList.insert(0, jsonEncode(mockResult));
+      await prefs.setStringList('history_results', historyList);
 
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -82,7 +113,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> with SingleTickerPr
       if (!mounted) return;
       setState(() {
         _hasError = true;
-        _errorMessage = 'API Timeout: Failed to analyze documents. Please try again.';
+        _errorMessage = 'Analysis Failed: Something went wrong.';
       });
     }
   }
@@ -164,7 +195,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> with SingleTickerPr
         ),
         SizedBox(height: 64.h),
         Text(
-          tr('Analyzing Documents...', isHindi),
+          tr(_steps[_currentStepIndex], isHindi),
           style: GoogleFonts.inter(
             fontSize: 24.sp,
             fontWeight: FontWeight.bold,
@@ -173,7 +204,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> with SingleTickerPr
         ),
         SizedBox(height: 12.h),
         Text(
-          tr('Checking authenticity & mismatches', isHindi),
+          tr('Processing details...', isHindi),
           style: GoogleFonts.inter(
             fontSize: 16.sp,
             color: Colors.white54,
