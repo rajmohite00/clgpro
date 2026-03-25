@@ -79,26 +79,32 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             children: [
               const Spacer(),
               // Logo 
-              Container(
-                width: 100.w,
-                height: 100.h,
-                decoration: BoxDecoration(
-                  color: Colors.blueAccent.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(24.r),
-                  border: Border.all(color: Colors.blueAccent.withOpacity(0.5), width: 2.w),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blueAccent.withOpacity(0.2),
-                      blurRadius: 20.r,
-                      spreadRadius: 5.r,
+              AnimatedBuilder(
+                animation: _fadeAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: 0.5 + (_fadeAnimation.value * 0.5),
+                    child: Container(
+                      width: 120.w,
+                      height: 120.h,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(24.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blueAccent.withOpacity(0.15 * _fadeAnimation.value),
+                            blurRadius: 24.r,
+                            spreadRadius: 8.r,
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        'assets/icon.png',
+                        fit: BoxFit.contain,
+                      ),
                     ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.document_scanner_rounded,
-                  size: 50.sp,
-                  color: Colors.blueAccent,
-                ),
+                  );
+                },
               ),
               SizedBox(height: 24.h),
               // App Name

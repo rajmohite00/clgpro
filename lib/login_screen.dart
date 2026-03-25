@@ -63,8 +63,29 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Brand or Logo space (optional, skipping for now)
-                      SizedBox(height: 16.h),
+                      // Brand or Logo space
+                      Center(
+                        child: Container(
+                          width: 80.w,
+                          height: 80.h,
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(16.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colorScheme.primary.withOpacity(0.1),
+                                blurRadius: 20.r,
+                                spreadRadius: 4.r,
+                              ),
+                            ],
+                          ),
+                          child: Image.asset(
+                            'assets/icon.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 24.h),
 
                       // Header
                       StaggeredListItem(
