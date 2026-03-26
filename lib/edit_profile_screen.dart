@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import 'providers/user_provider.dart';
 import 'providers/settings_provider.dart';
 import 'utils/animations.dart';
@@ -29,6 +31,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameController.dispose();
     _emailController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      if (!mounted) return;
+      Provider.of<UserProvider>(context, listen: false).updateProfilePic(image.path);
+    }
   }
 
   void _showSnackbar(String msg, {bool isError = false}) {
@@ -113,25 +124,49 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                           ],
                         ),
-                        child: Container(
-                          padding: EdgeInsets.all(3.w),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: theme.scaffoldBackgroundColor,
-                          ),
-                          child: CircleAvatar(
-                            radius: 42.r,
-                            backgroundColor: colorScheme.primary.withOpacity(0.1),
-                            child: Text(
-                              userProvider.name.isNotEmpty
-                                  ? userProvider.name[0].toUpperCase()
-                                  : 'U',
-                              style: GoogleFonts.inter(
-                                fontSize: 32.sp,
-                                fontWeight: FontWeight.w800,
-                                color: colorScheme.primary,
+                        child: GestureDetector(
+                          onTap: _pickImage,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(3.w),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: theme.scaffoldBackgroundColor,
+                                ),
+                                child: CircleAvatar(
+                                  radius: 42.r,
+                                  backgroundColor: colorScheme.primary.withOpacity(0.1),
+                                  backgroundImage: userProvider.profilePicPath != null 
+                                      ? FileImage(File(userProvider.profilePicPath!)) 
+                                      : null,
+                                  child: userProvider.profilePicPath == null ? Text(
+                                    userProvider.name.isNotEmpty
+                                        ? userProvider.name[0].toUpperCase()
+                                        : 'U',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 32.sp,
+                                      fontWeight: FontWeight.w800,
+                                      color: colorScheme.primary,
+                                    ),
+                                  ) : null,
+                                ),
                               ),
-                            ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: EdgeInsets.all(6.w),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: theme.scaffoldBackgroundColor, width: 2.w),
+                                  ),
+                                  child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 14.sp),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

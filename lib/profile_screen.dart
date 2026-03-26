@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -140,14 +141,17 @@ class ProfileScreen extends StatelessWidget {
                                   child: CircleAvatar(
                                     radius: 44.r,
                                     backgroundColor: AppTheme.blueLight,
-                                    child: Text(
+                                    backgroundImage: userProvider.profilePicPath != null 
+                                      ? FileImage(File(userProvider.profilePicPath!)) 
+                                      : null,
+                                    child: userProvider.profilePicPath == null ? Text(
                                       displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
                                       style: GoogleFonts.inter(
                                         fontSize: 32.sp,
                                         fontWeight: FontWeight.w800,
                                         color: AppTheme.secondary,
                                       ),
-                                    ),
+                                    ) : null,
                                   ),
                                 ),
                                 SizedBox(height: 14.h),

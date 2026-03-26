@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,6 +9,7 @@ import 'profile_screen.dart';
 import 'utils/animations.dart';
 import 'package:provider/provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/user_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -153,9 +155,10 @@ class _HomeView extends StatelessWidget {
     final textDimColor = colorScheme.onSurface.withOpacity(0.52);
     final cardColor = theme.cardColor;
 
+    final userProvider = Provider.of<UserProvider>(context);
     final settings = Provider.of<SettingsProvider>(context);
     final bool isHindi = settings.isHindi;
-    final String userName = settings.privacyMode ? 'R**' : 'Raj';
+    final String userName = settings.privacyMode ? 'R**' : userProvider.name;
 
     return SafeArea(
       child: Center(
@@ -223,7 +226,12 @@ class _HomeView extends StatelessWidget {
                             child: CircleAvatar(
                               radius: 22.r,
                               backgroundColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
-                              child: Icon(Icons.person_rounded, color: colorScheme.primary, size: 22.sp),
+                              backgroundImage: userProvider.profilePicPath != null 
+                                  ? FileImage(File(userProvider.profilePicPath!)) 
+                                  : null,
+                              child: userProvider.profilePicPath == null 
+                                  ? Icon(Icons.person_rounded, color: colorScheme.primary, size: 22.sp) 
+                                  : null,
                             ),
                           ),
                         ),
