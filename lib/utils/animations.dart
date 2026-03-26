@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
@@ -13,7 +14,7 @@ class FadeSlidePageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final begin = Offset(0.05.w, 0.0.h); // Slight slide right to left
+    final begin = Offset(0.05.w, 0.0.h);
     const end = Offset.zero;
     const curve = Curves.easeInOut;
 
@@ -50,7 +51,7 @@ class _AnimatedScaleButtonState extends State<AnimatedScaleButton> with SingleTi
       vsync: this,
       duration: const Duration(milliseconds: 150),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -80,7 +81,7 @@ class _AnimatedScaleButtonState extends State<AnimatedScaleButton> with SingleTi
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16.r), // Adjust if needed
+          borderRadius: BorderRadius.circular(20.r),
           onTapDown: _onTapDown,
           onTapUp: _onTapUp,
           onTapCancel: _onTapCancel,
@@ -115,18 +116,18 @@ class _StaggeredListItemState extends State<StaggeredListItem> with SingleTicker
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 400),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
 
-    _slideAnimation = Tween<Offset>(begin: Offset(0.w, 0.1.h), end: Offset.zero).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    _slideAnimation = Tween<Offset>(begin: Offset(0.w, 0.12.h), end: Offset.zero).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
 
-    Future.delayed(Duration(milliseconds: 50 * widget.index), () {
+    Future.delayed(Duration(milliseconds: 60 * widget.index), () {
       if (mounted) _controller.forward();
     });
   }
@@ -174,26 +175,24 @@ class _InteractiveCardState extends State<InteractiveCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
-        transform: Matrix4.identity()..translate(0.0, _isHovered ? -2.0 : 0.0),
+        transform: Matrix4.identity()..translate(0.0, _isHovered ? -3.0 : 0.0),
         decoration: BoxDecoration(
           color: theme.cardColor,
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(20.r),
           boxShadow: _isHovered
               ? [
                   BoxShadow(
-                    color: theme.brightness == Brightness.dark
-                        ? Colors.white.withOpacity(0.1)
-                        : Colors.black.withOpacity(0.15),
-                    blurRadius: 15.r,
-                    offset: Offset(0.w, 8.h),
+                    color: theme.colorScheme.primary.withOpacity(0.15),
+                    blurRadius: 20.r,
+                    offset: Offset(0.w, 10.h),
                   )
                 ]
               : [
                   BoxShadow(
                     color: theme.brightness == Brightness.dark
                         ? Colors.black.withOpacity(0.3)
-                        : Colors.black.withOpacity(0.05),
-                    blurRadius: 8.r,
+                        : Colors.black.withOpacity(0.06),
+                    blurRadius: 10.r,
                     offset: Offset(0.w, 4.h),
                   )
                 ],
@@ -221,27 +220,27 @@ class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 10))..repeat(reverse: true);
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat(reverse: true);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     _color1 = ColorTween(
-      begin: isDark ? const Color(0xFF1E1B4B) : const Color(0xFFE0E7FF), 
-      end: isDark ? const Color(0xFF0F172A) : const Color(0xFFFCE7F3),
+      begin: isDark ? const Color(0xFF0F0C29) : const Color(0xFFEFF6FF),
+      end: isDark ? const Color(0xFF1A0533) : const Color(0xFFF5F3FF),
     ).animate(_controller);
 
     _color2 = ColorTween(
-      begin: isDark ? const Color(0xFF312E81) : const Color(0xFFCCFBF1), 
-      end: isDark ? const Color(0xFF4C1D95) : const Color(0xFFFEF3C7),
+      begin: isDark ? const Color(0xFF302B63) : const Color(0xFFEDE9FE),
+      end: isDark ? const Color(0xFF43116A) : const Color(0xFFDCFCE7),
     ).animate(_controller);
-    
+
     _color3 = ColorTween(
-      begin: isDark ? const Color(0xFF0F172A) : const Color(0xFFF3E8FF), 
-      end: isDark ? const Color(0xFF831843) : const Color(0xFFE0F2FE),
+      begin: isDark ? const Color(0xFF24243e) : const Color(0xFFFDF4FF),
+      end: isDark ? const Color(0xFF0F0C29) : const Color(0xFFEFF6FF),
     ).animate(_controller);
   }
 
@@ -278,32 +277,235 @@ class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
 class GlassContainer extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
-  
-  const GlassContainer({Key? key, required this.child, this.padding = EdgeInsets.zero}) : super(key: key);
+  final Color? borderColor;
+
+  const GlassContainer({Key? key, required this.child, this.padding = EdgeInsets.zero, this.borderColor}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+    final accent = theme.colorScheme.primary;
+
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(24.r),
+        color: isDark ? Colors.white.withOpacity(0.06) : Colors.white.withOpacity(0.75),
+        borderRadius: BorderRadius.circular(28.r),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.5),
+          color: borderColor ?? (isDark ? accent.withOpacity(0.15) : Colors.white.withOpacity(0.8)),
           width: 1.5.w,
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.05),
-            blurRadius: 30.r,
-            spreadRadius: 5.r,
-          )
+            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.06),
+            blurRadius: 40.r,
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: accent.withOpacity(isDark ? 0.08 : 0.04),
+            blurRadius: 60.r,
+            spreadRadius: 10.r,
+          ),
         ],
       ),
-      child: child, // Ideally wrapped in BackdropFilter but it's computationally heavy, keeping it simple container style for performance
+      child: child,
     );
   }
+}
+
+// ─── Shimmer Effect ────────────────────────────────────────────────────────
+class ShimmerWidget extends StatefulWidget {
+  final double width;
+  final double height;
+  final double borderRadius;
+  const ShimmerWidget({Key? key, required this.width, required this.height, this.borderRadius = 12}) : super(key: key);
+
+  @override
+  _ShimmerWidgetState createState() => _ShimmerWidgetState();
+}
+
+class _ShimmerWidgetState extends State<ShimmerWidget> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
+    _animation = Tween<double>(begin: -2, end: 2).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, _) {
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.borderRadius.r),
+            gradient: LinearGradient(
+              begin: Alignment(_animation.value, 0),
+              end: Alignment(_animation.value + 1, 0),
+              colors: isDark
+                  ? [Colors.white.withOpacity(0.04), Colors.white.withOpacity(0.08), Colors.white.withOpacity(0.04)]
+                  : [Colors.grey.withOpacity(0.08), Colors.grey.withOpacity(0.14), Colors.grey.withOpacity(0.08)],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ─── Pulse Glow Widget ────────────────────────────────────────────────────
+class PulseGlow extends StatefulWidget {
+  final Widget child;
+  final Color color;
+  final double radius;
+
+  const PulseGlow({Key? key, required this.child, required this.color, this.radius = 40}) : super(key: key);
+
+  @override
+  _PulseGlowState createState() => _PulseGlowState();
+}
+
+class _PulseGlowState extends State<PulseGlow> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withOpacity(0.35 * _pulseAnimation.value),
+                blurRadius: widget.radius.r,
+                spreadRadius: (widget.radius * 0.2).r,
+              ),
+            ],
+          ),
+          child: widget.child,
+        );
+      },
+    );
+  }
+}
+
+// ─── Floating Orbs Background ─────────────────────────────────────────────
+class FloatingOrbsBackground extends StatefulWidget {
+  final Widget child;
+  final List<Color> orbColors;
+
+  const FloatingOrbsBackground({
+    Key? key,
+    required this.child,
+    this.orbColors = const [Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFF06B6D4)],
+  }) : super(key: key);
+
+  @override
+  _FloatingOrbsBackgroundState createState() => _FloatingOrbsBackgroundState();
+}
+
+class _OrbData {
+  double x, y, size, speed, phase;
+  _OrbData({required this.x, required this.y, required this.size, required this.speed, required this.phase});
+}
+
+class _FloatingOrbsBackgroundState extends State<FloatingOrbsBackground> with TickerProviderStateMixin {
+  late AnimationController _controller;
+  late List<_OrbData> _orbs;
+
+  @override
+  void initState() {
+    super.initState();
+    final rng = Random();
+    _orbs = List.generate(5, (i) => _OrbData(
+      x: rng.nextDouble(),
+      y: rng.nextDouble(),
+      size: 100 + rng.nextDouble() * 150,
+      speed: 0.3 + rng.nextDouble() * 0.4,
+      phase: rng.nextDouble() * pi * 2,
+    ));
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 12))..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            return CustomPaint(
+              painter: _OrbsPainter(_orbs, _controller.value, widget.orbColors),
+              size: Size.infinite,
+            );
+          },
+        ),
+        widget.child,
+      ],
+    );
+  }
+}
+
+class _OrbsPainter extends CustomPainter {
+  final List<_OrbData> orbs;
+  final double t;
+  final List<Color> colors;
+
+  _OrbsPainter(this.orbs, this.t, this.colors);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (int i = 0; i < orbs.length; i++) {
+      final orb = orbs[i];
+      final color = colors[i % colors.length];
+      final dx = orb.x * size.width + sin(t * 2 * pi * orb.speed + orb.phase) * 40;
+      final dy = orb.y * size.height + cos(t * 2 * pi * orb.speed + orb.phase) * 30;
+
+      final paint = Paint()
+        ..shader = RadialGradient(
+          colors: [color.withOpacity(0.18), color.withOpacity(0.0)],
+        ).createShader(Rect.fromCircle(center: Offset(dx, dy), radius: orb.size));
+
+      canvas.drawCircle(Offset(dx, dy), orb.size, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _OrbsPainter old) => true;
 }

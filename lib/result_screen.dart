@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,15 +13,64 @@ import 'utils/animations.dart';
 import 'providers/settings_provider.dart';
 import 'providers/document_provider.dart';
 
-class ResultScreen extends StatelessWidget {
+class ResultScreen extends StatefulWidget {
   final Map<String, dynamic> resultData;
 
   const ResultScreen({super.key, required this.resultData});
 
+  @override
+  State<ResultScreen> createState() => _ResultScreenState();
+}
+
+class _ResultScreenState extends State<ResultScreen> with TickerProviderStateMixin {
+  late AnimationController _heroController;
+  late AnimationController _meterController;
+  late Animation<double> _heroScale;
+  late Animation<double> _heroFade;
+  late Animation<double> _meterProgress;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _heroController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _meterController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+
+    _heroScale = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _heroController, curve: Curves.elasticOut),
+    );
+    _heroFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _heroController, curve: const Interval(0.0, 0.5, curve: Curves.easeOut)),
+    );
+
+    final int fraudScore = widget.resultData['fraudScore'] ?? 0;
+    _meterProgress = Tween<double>(begin: 0.0, end: fraudScore / 100.0).animate(
+      CurvedAnimation(parent: _meterController, curve: Curves.easeOutCubic),
+    );
+
+    _heroController.forward();
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) _meterController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _heroController.dispose();
+    _meterController.dispose();
+    super.dispose();
+  }
+
   Future<void> _generatePdf(BuildContext context) async {
     final pdf = pw.Document();
-    
-    final bool isMatch = resultData['status'] == 'Match';
+
+    final bool isMatch = widget.resultData['status'] == 'Match';
     final String dateStr = DateTime.now().toString().split(' ')[0];
 
     pdf.addPage(
@@ -30,18 +80,41 @@ class ResultScreen extends StatelessWidget {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Header(level: 0, child: pw.Text('Identity Analysis Report - $dateStr', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900))),
+              pw.Header(
+                level: 0,
+                child: pw.Text(
+                  'Identity Analysis Report - $dateStr',
+                  style: pw.TextStyle(
+                      fontSize: 20,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.indigo900),
+                ),
+              ),
               pw.SizedBox(height: 20),
-              pw.Text('Overall Status: ${resultData['status']}', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: isMatch ? PdfColors.green600 : PdfColors.red600)),
-              pw.SizedBox(height: 40),
-              pw.Text('Detailed Field Comparisons', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+              pw.Text(
+                'Overall Status: ${widget.resultData['status']}',
+                style: pw.TextStyle(
+                  fontSize: 18,
+                  fontWeight: pw.FontWeight.bold,
+                  color: isMatch ? PdfColors.green700 : PdfColors.red700,
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                'Fraud Risk Score: ${widget.resultData['fraudScore']}%',
+                style: pw.TextStyle(fontSize: 14, color: PdfColors.grey700),
+              ),
+              pw.SizedBox(height: 32),
+              pw.Text('Detailed Field Comparisons',
+                  style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 10),
               pw.TableHelper.fromTextArray(
                 context: pdfContext,
                 headers: ['Field', 'Document 1', 'Document 2', 'Status'],
-                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                headerStyle:
+                    pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
                 headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey800),
-                cellHeight: 30,
+                cellHeight: 32,
                 cellAlignments: {
                   0: pw.Alignment.centerLeft,
                   1: pw.Alignment.centerLeft,
@@ -49,20 +122,18 @@ class ResultScreen extends StatelessWidget {
                   3: pw.Alignment.center,
                 },
                 data: List<List<String>>.generate(
-                  resultData['comparisons'].length,
+                  widget.resultData['comparisons'].length,
                   (index) {
-                    final comp = resultData['comparisons'][index];
-                    return [
-                      comp['field'],
-                      comp['doc1'],
-                      comp['doc2'],
-                      comp['status'],
-                    ];
+                    final comp = widget.resultData['comparisons'][index];
+                    return [comp['field'], comp['doc1'], comp['doc2'], comp['status']];
                   },
                 ),
               ),
               pw.SizedBox(height: 40),
-              pw.Text('Generated automatically by AntiGravity Verifier', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
+              pw.Text(
+                'Generated by Smart Document Detective',
+                style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500),
+              ),
             ],
           );
         },
@@ -75,391 +146,102 @@ class ResultScreen extends StatelessWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final settings = Provider.of<SettingsProvider>(context);
-    final isHindi = settings.isHindi;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    bool isMatch = resultData['status'] == 'Match';
-    Color statusColor = isMatch ? Colors.green : colorScheme.error;
-    IconData statusIcon = isMatch ? Icons.check_circle_outline : Icons.cancel_outlined;
-
-    return PopScope(
-      canPop: false, // Prevent physical back navigation into the processing buffer
-      child: Scaffold(
-          backgroundColor: theme.scaffoldBackgroundColor,
-          appBar: AppBar(
-            backgroundColor: theme.appBarTheme.backgroundColor ?? theme.scaffoldBackgroundColor,
-            title: Text(tr('Analysis Report', isHindi), style: GoogleFonts.inter(color: theme.appBarTheme.foregroundColor ?? colorScheme.onSurface)),
-            iconTheme: IconThemeData(color: theme.appBarTheme.foregroundColor ?? colorScheme.onSurface),
-            automaticallyImplyLeading: false, 
-          ),
-          body: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isDesktop = constraints.maxWidth > 800;
-
-                // Shared Banner Content
-                final statusBanner = TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  duration: const Duration(milliseconds: 600),
-                  curve: Curves.easeOutBack,
-                  builder: (context, value, child) {
-                    return Transform.scale(
-                      scale: 0.8 + (0.2 * value), // Scale from 0.8 to 1.0
-                      child: Container(
-                        padding: EdgeInsets.symmetric(vertical: 32.h, horizontal: 16.w),
-                        decoration: BoxDecoration(
-                          color: Color.lerp(Colors.grey.withOpacity(0.1), statusColor.withOpacity(0.05), value),
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(
-                            color: Color.lerp(Colors.grey.withOpacity(0.3), statusColor.withOpacity(0.3), value)!,
-                            width: 2.w,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(statusIcon, size: 72.sp, color: Color.lerp(Colors.grey, statusColor, value)),
-                            SizedBox(height: 16.h),
-                            Text(
-                              isMatch ? tr('Documents Match', isHindi) : tr('Mismatch Detected', isHindi),
-                              style: GoogleFonts.inter(
-                                fontSize: 26.sp,
-                                fontWeight: FontWeight.bold,
-                                color: Color.lerp(Colors.grey, statusColor, value),
-                              ),
-                            ),
-                            SizedBox(height: 12.h),
-                            Text(
-                              isMatch 
-                                  ? tr('All verified fields align properly.', isHindi) 
-                                  : tr('We found discrepancies between the provided documents.', isHindi),
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 16.sp),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-
-                // Shared Actions Content
-                final actionButtons = Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () => _generatePdf(context),
-                      icon: Icon(Icons.download_rounded, color: colorScheme.onPrimary),
-                      label: Text(tr('Download Report', isHindi), style: GoogleFonts.inter(fontSize: 16.sp, color: colorScheme.onPrimary, fontWeight: FontWeight.w600)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        padding: EdgeInsets.symmetric(vertical: 16.h),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    OutlinedButton(
-                      onPressed: () {
-                        // Navigate entirely back to the Dashboard
-                        Navigator.popUntil(context, (route) => route.isFirst);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: colorScheme.primary),
-                        padding: EdgeInsets.symmetric(vertical: 16.h),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-                      ),
-                      child: Text(tr('Back to Dashboard', isHindi), style: GoogleFonts.inter(fontSize: 16.sp, color: colorScheme.primary, fontWeight: FontWeight.w600)),
-                    ),
-                    SizedBox(height: 16.h),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.popUntil(context, (route) => route.isFirst);
-                      },
-                      child: Text(tr('Re-upload Documents', isHindi), style: GoogleFonts.inter(fontSize: 16.sp, color: colorScheme.onSurface.withOpacity(0.54))),
-                    )
-                  ],
-                );
-
-                // Shared Detailed Comparisons Content
-                final detailedComparisons = Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      tr('Detailed Comparison', isHindi),
-                      style: GoogleFonts.inter(fontSize: 20.sp, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
-                    ),
-                    SizedBox(height: 16.h),
-                    ...List.generate(resultData['comparisons'].length, (index) {
-                      final comp = resultData['comparisons'][index];
-                      return StaggeredListItem(
-                        index: index,
-                        child: _buildComparisonCard(
-                          context: context,
-                          field: comp['field'],
-                          doc1Value: comp['doc1'],
-                          doc2Value: comp['doc2'],
-                          status: comp['status'],
-                        ),
-                      );
-                    }),
-                  ],
-                );
-
-                // Uploaded Images Preview
-                final docProvider = Provider.of<DocumentProvider>(context, listen: false);
-                final imagePreview = docProvider.selectedFiles.isEmpty
-                    ? const SizedBox.shrink()
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            tr('Uploaded Documents', isHindi),
-                            style: GoogleFonts.inter(fontSize: 20.sp, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
-                          ),
-                          SizedBox(height: 16.h),
-                          SizedBox(
-                            height: 120.h,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: docProvider.selectedFiles.length,
-                              separatorBuilder: (_, __) => SizedBox(width: 16.w),
-                              itemBuilder: (context, index) {
-                                final file = docProvider.selectedFiles[index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (_) => Dialog(
-                                        backgroundColor: Colors.transparent,
-                                        insetPadding: EdgeInsets.zero,
-                                        child: Stack(
-                                          fit: StackFit.expand,
-                                          children: [
-                                            InteractiveViewer(
-                                              minScale: 0.5,
-                                              maxScale: 4.0,
-                                              child: file.isPdf
-                                                  ? Center(child: Icon(Icons.picture_as_pdf, size: 80.sp, color: Colors.white))
-                                                  : Image.file(File(file.path), fit: BoxFit.contain),
-                                            ),
-                                            Positioned(
-                                              top: 40.h,
-                                              right: 20.w,
-                                              child: IconButton(
-                                                icon: Icon(Icons.close, color: Colors.white, size: 30.sp),
-                                                onPressed: () => Navigator.pop(context),
-                                              ),
-                                            )
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    width: 100.w,
-                                    decoration: BoxDecoration(
-                                      color: theme.cardColor,
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: file.isPdf
-                                        ? Center(child: Icon(Icons.picture_as_pdf, color: colorScheme.primary, size: 40.sp))
-                                        : Image.file(File(file.path), fit: BoxFit.cover),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          SizedBox(height: 40.h),
-                        ],
-                      );
-
-                final int fraudScore = resultData['fraudScore'] ?? 0;
-
-                if (isDesktop) {
-                  return Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: 1200),
-                      child: Padding(
-                        padding: EdgeInsets.all(32.0.w),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 1,
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  children: [
-                                    statusBanner,
-                                    SizedBox(height: 24.h),
-                                    _buildFraudMeter(context, fraudScore),
-                                    SizedBox(height: 40.h),
-                                    actionButtons,
-                                  ],
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 40.w),
-                            Expanded(
-                              flex: 2,
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    imagePreview,
-                                    detailedComparisons,
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }
-
-                return SingleChildScrollView(
-                  padding: EdgeInsets.all(24.0.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      statusBanner,
-                      SizedBox(height: 32.h),
-                      _buildFraudMeter(context, fraudScore),
-                      SizedBox(height: 40.h),
-                      imagePreview,
-                      detailedComparisons,
-                      SizedBox(height: 48.h),
-                      actionButtons,
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-      ),
-    );
-  }
-
-  Widget _buildFraudMeter(BuildContext context, int score) {
-    final settings = Provider.of<SettingsProvider>(context);
-    final isHindi = settings.isHindi;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    
-    Color meterColor;
-    String meterLabel;
-    if (score <= 30) {
-      meterColor = Colors.green;
-      meterLabel = 'Low Risk';
-    } else if (score <= 70) {
-      meterColor = Colors.yellow.shade700;
-      meterLabel = 'Medium Risk';
-    } else {
-      meterColor = colorScheme.error;
-      meterLabel = 'High Risk';
-    }
-
-    return Container(
-      padding: EdgeInsets.all(24.w),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: colorScheme.onSurface.withOpacity(0.05)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            tr('Fraud Risk Score', isHindi),
-            style: GoogleFonts.inter(fontSize: 18.sp, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
-          ),
-          SizedBox(height: 24.h),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 120.w,
-                height: 120.w,
-                child: CircularProgressIndicator(
-                  value: score / 100,
-                  strokeWidth: 12.w,
-                  backgroundColor: colorScheme.onSurface.withOpacity(0.1),
-                  valueColor: AlwaysStoppedAnimation<Color>(meterColor),
-                ),
-              ),
-              Column(
-                children: [
-                  Text(
-                    '$score%',
-                    style: GoogleFonts.inter(fontSize: 28.sp, fontWeight: FontWeight.bold, color: meterColor),
-                  ),
-                  Text(
-                    tr(meterLabel, isHindi),
-                    style: GoogleFonts.inter(fontSize: 12.sp, fontWeight: FontWeight.w600, color: meterColor),
-                  ),
-                ],
-              )
-            ],
-          )
-        ],
-      ),
-    );
-  }
-
-  void _showCardOptions(BuildContext context, String field, String doc1Value, String doc2Value, String status) {
+  void _showCardOptions(BuildContext context, String field, String doc1Value,
+      String doc2Value, String status) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
-    final String textToCopy = 'Field: $field\nDocument 1: $doc1Value\nDocument 2: $doc2Value\nStatus: $status';
+    final String textToCopy =
+        'Field: $field\nDocument 1: $doc1Value\nDocument 2: $doc2Value\nStatus: $status';
 
     showModalBottomSheet(
       context: context,
       backgroundColor: theme.cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24.r))),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28.r))),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 24.h),
+          padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 8.w),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(tr('Comparison Options', isHindi), style: GoogleFonts.inter(fontSize: 18.sp, fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
-              SizedBox(height: 16.h),
-              ListTile(
-                leading: Icon(Icons.copy_rounded, color: colorScheme.primary),
-                title: Text(tr('Copy Details', isHindi), style: GoogleFonts.inter(color: colorScheme.onSurface)),
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: textToCopy));
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(tr('Copied to clipboard!', isHindi)),
-                    backgroundColor: Colors.green,
-                  ));
-                },
+              Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurface.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
               ),
-              ListTile(
-                leading: Icon(Icons.share_rounded, color: colorScheme.primary),
-                title: Text(tr('Share', isHindi), style: GoogleFonts.inter(color: colorScheme.onSurface)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Share.share(textToCopy);
-                },
+              SizedBox(height: 20.h),
+              Text(
+                'Field Options',
+                style: GoogleFonts.inter(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w800,
+                    color: colorScheme.onSurface),
               ),
-              ListTile(
-                leading: Icon(Icons.bookmark_border_rounded, color: colorScheme.primary),
-                title: Text(tr('Save Field', isHindi), style: GoogleFonts.inter(color: colorScheme.onSurface)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(tr('Field saved for reference.', isHindi)),
-                    backgroundColor: colorScheme.primary,
-                  ));
+              SizedBox(height: 8.h),
+              ...[
+                {
+                  'icon': Icons.copy_rounded,
+                  'label': tr('Copy Details', isHindi),
+                  'color': const Color(0xFF6366F1),
+                  'onTap': () {
+                    Clipboard.setData(ClipboardData(text: textToCopy));
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Copied to clipboard!'),
+                      backgroundColor: const Color(0xFF10B981),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                      margin: EdgeInsets.all(16.w),
+                    ));
+                  }
                 },
-              ),
+                {
+                  'icon': Icons.share_rounded,
+                  'label': tr('Share', isHindi),
+                  'color': const Color(0xFF8B5CF6),
+                  'onTap': () {
+                    Navigator.pop(ctx);
+                    Share.share(textToCopy);
+                  }
+                },
+                {
+                  'icon': Icons.bookmark_rounded,
+                  'label': tr('Save Field', isHindi),
+                  'color': const Color(0xFFF59E0B),
+                  'onTap': () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Field saved for reference.'),
+                      backgroundColor: const Color(0xFFF59E0B),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                      margin: EdgeInsets.all(16.w),
+                    ));
+                  }
+                },
+              ].map((item) {
+                final color = item['color'] as Color;
+                return ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                    child: Icon(item['icon'] as IconData, color: color, size: 20.sp),
+                  ),
+                  title: Text(
+                    item['label'] as String,
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                  ),
+                  onTap: item['onTap'] as VoidCallback,
+                );
+              }),
             ],
           ),
         ),
@@ -467,16 +249,656 @@ class ResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildComparisonCard({required BuildContext context, required String field, required String doc1Value, required String doc2Value, required String status}) {
+  @override
+  Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
     final isHindi = settings.isHindi;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = colorScheme.onSurface;
+    final textDimColor = colorScheme.onSurface.withOpacity(0.52);
+
+    final bool isMatch = widget.resultData['status'] == 'Match';
+    final Color statusColor = isMatch ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+    final int fraudScore = widget.resultData['fraudScore'] ?? 0;
+
+    final docProvider = Provider.of<DocumentProvider>(context, listen: false);
+
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          title: Text(
+            tr('Analysis Report', isHindi),
+            style: GoogleFonts.inter(
+                color: textColor, fontWeight: FontWeight.w700, fontSize: 18.sp),
+          ),
+          actions: [
+            IconButton(
+              icon: Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurface.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(Icons.share_rounded, color: colorScheme.primary, size: 18.sp),
+              ),
+              onPressed: () {
+                Share.share(
+                    'Analysis Result: ${widget.resultData['status']}\nRisk Score: $fraudScore%\n— Smart Document Detective');
+              },
+            ),
+            SizedBox(width: 8.w),
+          ],
+        ),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth > 800;
+
+              // Card sections (shared between mobile and desktop)
+              final heroSection = FadeTransition(
+                opacity: _heroFade,
+                child: ScaleTransition(
+                  scale: _heroScale,
+                  child: _buildHeroBanner(
+                    isMatch: isMatch,
+                    statusColor: statusColor,
+                    isDark: isDark,
+                    textColor: textColor,
+                    textDimColor: textDimColor,
+                    isHindi: isHindi,
+                  ),
+                ),
+              );
+
+              final meterSection = _buildFraudMeter(
+                context: context,
+                fraudScore: fraudScore,
+                isDark: isDark,
+                textColor: textColor,
+                textDimColor: textDimColor,
+                isHindi: isHindi,
+              );
+
+              final actionSection = _buildActionButtons(
+                context: context,
+                colorScheme: colorScheme,
+                isDark: isDark,
+                textColor: textColor,
+                isHindi: isHindi,
+                isMatch: isMatch,
+              );
+
+              final imagesSection = docProvider.selectedFiles.isEmpty
+                  ? const SizedBox.shrink()
+                  : _buildImagePreview(
+                      context: context,
+                      docProvider: docProvider,
+                      theme: theme,
+                      colorScheme: colorScheme,
+                      isDark: isDark,
+                      textColor: textColor,
+                      isHindi: isHindi,
+                    );
+
+              final comparisonsSection = _buildComparisons(
+                context: context,
+                theme: theme,
+                colorScheme: colorScheme,
+                isDark: isDark,
+                textColor: textColor,
+                textDimColor: textDimColor,
+                isHindi: isHindi,
+              );
+
+              if (isDesktop) {
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1200),
+                    child: Padding(
+                      padding: EdgeInsets.all(28.w),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 4,
+                            child: SingleChildScrollView(
+                              child: Column(
+                                children: [
+                                  heroSection,
+                                  SizedBox(height: 20.h),
+                                  meterSection,
+                                  SizedBox(height: 24.h),
+                                  actionSection,
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 28.w),
+                          Expanded(
+                            flex: 6,
+                            child: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  imagesSection,
+                                  comparisonsSection,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    heroSection,
+                    SizedBox(height: 20.h),
+                    meterSection,
+                    SizedBox(height: 20.h),
+                    imagesSection,
+                    comparisonsSection,
+                    SizedBox(height: 24.h),
+                    actionSection,
+                    SizedBox(height: 32.h),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroBanner({
+    required bool isMatch,
+    required Color statusColor,
+    required bool isDark,
+    required Color textColor,
+    required Color textDimColor,
+    required bool isHindi,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(24.w),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            statusColor.withOpacity(isDark ? 0.2 : 0.1),
+            statusColor.withOpacity(isDark ? 0.08 : 0.04),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(color: statusColor.withOpacity(0.3), width: 1.5.w),
+        boxShadow: [
+          BoxShadow(
+            color: statusColor.withOpacity(isDark ? 0.15 : 0.08),
+            blurRadius: 24.r,
+            offset: Offset(0, 8.h),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Status icon with glow
+          PulseGlow(
+            color: statusColor,
+            radius: 30,
+            child: Container(
+              width: 80.w,
+              height: 80.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: statusColor.withOpacity(0.15),
+                border: Border.all(color: statusColor.withOpacity(0.4), width: 2.w),
+              ),
+              child: Icon(
+                isMatch ? Icons.verified_rounded : Icons.gpp_bad_rounded,
+                size: 40.sp,
+                color: statusColor,
+              ),
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            isMatch ? tr('Documents Match', isHindi) : tr('Mismatch Detected', isHindi),
+            style: GoogleFonts.inter(
+              fontSize: 24.sp,
+              fontWeight: FontWeight.w900,
+              color: statusColor,
+              letterSpacing: -0.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            isMatch
+                ? tr('All verified fields align properly.', isHindi)
+                : tr('We found discrepancies between the provided documents.', isHindi),
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              color: textDimColor,
+              fontSize: 13.sp,
+              height: 1.5,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20.r),
+              border: Border.all(color: statusColor.withOpacity(0.2)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isMatch ? Icons.shield_rounded : Icons.warning_rounded,
+                  color: statusColor,
+                  size: 14.sp,
+                ),
+                SizedBox(width: 6.w),
+                Text(
+                  isMatch ? 'AUTHENTIC' : 'SUSPICIOUS',
+                  style: GoogleFonts.inter(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w800,
+                    color: statusColor,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFraudMeter({
+    required BuildContext context,
+    required int fraudScore,
+    required bool isDark,
+    required Color textColor,
+    required Color textDimColor,
+    required bool isHindi,
+  }) {
+    final theme = Theme.of(context);
+
+    Color meterColor;
+    String meterLabel;
+    String riskDesc;
+    if (fraudScore <= 30) {
+      meterColor = const Color(0xFF10B981);
+      meterLabel = 'Low Risk';
+      riskDesc = 'Document appears genuine';
+    } else if (fraudScore <= 70) {
+      meterColor = const Color(0xFFF59E0B);
+      meterLabel = 'Medium Risk';
+      riskDesc = 'Some discrepancies found';
+    } else {
+      meterColor = const Color(0xFFEF4444);
+      meterLabel = 'High Risk';
+      riskDesc = 'Significant fraud indicators';
+    }
+
+    return Container(
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(color: meterColor.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+            blurRadius: 14.r,
+            offset: Offset(0, 4.h),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Circular meter
+          AnimatedBuilder(
+            animation: _meterProgress,
+            builder: (context, _) {
+              return SizedBox(
+                width: 90.w,
+                height: 90.w,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 90.w,
+                      height: 90.w,
+                      child: CircularProgressIndicator(
+                        value: _meterProgress.value,
+                        strokeWidth: 10.w,
+                        strokeCap: StrokeCap.round,
+                        backgroundColor: meterColor.withOpacity(0.1),
+                        valueColor: AlwaysStoppedAnimation<Color>(meterColor),
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${fraudScore}%',
+                          style: GoogleFonts.inter(
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.w900,
+                            color: meterColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          SizedBox(width: 20.w),
+
+          // Labels
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Fraud Risk Score',
+                  style: GoogleFonts.inter(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: textDimColor,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                SizedBox(height: 6.h),
+                Text(
+                  meterLabel,
+                  style: GoogleFonts.inter(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.w900,
+                    color: meterColor,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  riskDesc,
+                  style: GoogleFonts.inter(
+                    fontSize: 12.sp,
+                    color: textDimColor,
+                  ),
+                ),
+                SizedBox(height: 10.h),
+                // Mini score bar
+                Container(
+                  height: 6.h,
+                  decoration: BoxDecoration(
+                    color: meterColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(3.r),
+                  ),
+                  child: AnimatedBuilder(
+                    animation: _meterProgress,
+                    builder: (context, _) {
+                      return FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: _meterProgress.value,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [meterColor.withOpacity(0.7), meterColor],
+                            ),
+                            borderRadius: BorderRadius.circular(3.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: meterColor.withOpacity(0.4),
+                                blurRadius: 4.r,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImagePreview({
+    required BuildContext context,
+    required DocumentProvider docProvider,
+    required ThemeData theme,
+    required ColorScheme colorScheme,
+    required bool isDark,
+    required Color textColor,
+    required bool isHindi,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 3.w,
+              height: 20.h,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    colors: [colorScheme.primary, colorScheme.secondary],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter),
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            ),
+            SizedBox(width: 10.w),
+            Text(
+              'Uploaded Documents',
+              style: GoogleFonts.inter(
+                  fontSize: 16.sp, fontWeight: FontWeight.w800, color: textColor),
+            ),
+          ],
+        ),
+        SizedBox(height: 14.h),
+        SizedBox(
+          height: 110.h,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: docProvider.selectedFiles.length,
+            separatorBuilder: (_, __) => SizedBox(width: 12.w),
+            itemBuilder: (context, index) {
+              final file = docProvider.selectedFiles[index];
+              return GestureDetector(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => Dialog(
+                      backgroundColor: Colors.transparent,
+                      insetPadding: EdgeInsets.zero,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          InteractiveViewer(
+                            minScale: 0.5,
+                            maxScale: 4.0,
+                            child: file.isPdf
+                                ? Center(
+                                    child: Icon(Icons.picture_as_pdf,
+                                        size: 80.sp, color: Colors.white))
+                                : Image.file(File(file.path), fit: BoxFit.contain),
+                          ),
+                          Positioned(
+                            top: 40.h,
+                            right: 20.w,
+                            child: GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.5),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.close, color: Colors.white, size: 22.sp),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 90.w,
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(14.r),
+                    border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                        blurRadius: 8.r,
+                        offset: Offset(0, 2.h),
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: file.isPdf
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.picture_as_pdf_rounded,
+                                color: const Color(0xFFEF4444), size: 28.sp),
+                            SizedBox(height: 4.h),
+                            Text(
+                              'PDF',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFEF4444),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Image.file(File(file.path), fit: BoxFit.cover),
+                ),
+              );
+            },
+          ),
+        ),
+        SizedBox(height: 24.h),
+      ],
+    );
+  }
+
+  Widget _buildComparisons({
+    required BuildContext context,
+    required ThemeData theme,
+    required ColorScheme colorScheme,
+    required bool isDark,
+    required Color textColor,
+    required Color textDimColor,
+    required bool isHindi,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 3.w,
+              height: 20.h,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    colors: [colorScheme.primary, colorScheme.secondary],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter),
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            ),
+            SizedBox(width: 10.w),
+            Text(
+              tr('Detailed Comparison', isHindi),
+              style: GoogleFonts.inter(
+                  fontSize: 16.sp, fontWeight: FontWeight.w800, color: textColor),
+            ),
+          ],
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          'Long-press any card for options',
+          style: GoogleFonts.inter(fontSize: 11.sp, color: textDimColor.withOpacity(0.6)),
+        ),
+        SizedBox(height: 14.h),
+        ...List.generate(widget.resultData['comparisons'].length, (index) {
+          final comp = widget.resultData['comparisons'][index];
+          return StaggeredListItem(
+            index: index,
+            child: _buildComparisonCard(
+              context: context,
+              field: comp['field'],
+              doc1Value: comp['doc1'],
+              doc2Value: comp['doc2'],
+              status: comp['status'],
+              theme: theme,
+              colorScheme: colorScheme,
+              isDark: isDark,
+              textColor: textColor,
+              textDimColor: textDimColor,
+              isHindi: isHindi,
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildComparisonCard({
+    required BuildContext context,
+    required String field,
+    required String doc1Value,
+    required String doc2Value,
+    required String status,
+    required ThemeData theme,
+    required ColorScheme colorScheme,
+    required bool isDark,
+    required Color textColor,
+    required Color textDimColor,
+    required bool isHindi,
+  }) {
     Color badgeColor;
-    if (status == 'Match') badgeColor = Colors.green;
-    else if (status == 'Partial') badgeColor = Colors.yellow.shade700;
-    else badgeColor = colorScheme.error;
+    IconData statusIcon;
+    if (status == 'Match') {
+      badgeColor = const Color(0xFF10B981);
+      statusIcon = Icons.check_circle_rounded;
+    } else if (status == 'Partial') {
+      badgeColor = const Color(0xFFF59E0B);
+      statusIcon = Icons.warning_rounded;
+    } else {
+      badgeColor = const Color(0xFFEF4444);
+      statusIcon = Icons.cancel_rounded;
+    }
 
     return GestureDetector(
       onLongPress: () {
@@ -484,74 +906,277 @@ class ResultScreen extends StatelessWidget {
         _showCardOptions(context, field, doc1Value, doc2Value, status);
       },
       child: Container(
-      margin: EdgeInsets.only(bottom: 16.h),
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16.r),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  field,
-                  style: GoogleFonts.inter(fontSize: 16.sp, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
-                ),
+        margin: EdgeInsets.only(bottom: 12.h),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: badgeColor.withOpacity(0.15), width: 1.w),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+              blurRadius: 10.r,
+              offset: Offset(0, 3.h),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
+            Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 14.h, 12.w, 10.h),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                    child: Icon(statusIcon, color: badgeColor, size: 16.sp),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Text(
+                      field,
+                      style: GoogleFonts.inter(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w700,
+                        color: textColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(color: badgeColor.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      status.toUpperCase(),
+                      style: GoogleFonts.inter(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w800,
+                          color: badgeColor,
+                          letterSpacing: 0.5),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(width: 8.w),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: badgeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: badgeColor.withOpacity(0.5)),
-                ),
-                child: Text(
-                  status.toUpperCase(),
-                  style: GoogleFonts.inter(fontSize: 12.sp, fontWeight: FontWeight.bold, color: badgeColor, letterSpacing: 0.5),
-                ),
-              )
-            ],
-          ),
-          SizedBox(height: 20.h),
-          IntrinsicHeight(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(tr('DOCUMENT 1', isHindi), style: GoogleFonts.inter(fontSize: 11.sp, color: colorScheme.onSurface.withOpacity(0.54), letterSpacing: 1.0, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 6.h),
-                      Text(doc1Value, style: GoogleFonts.inter(fontSize: 14.sp, color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                    ],
+            ),
+
+            // Divider
+            Divider(height: 1.h, color: colorScheme.onSurface.withOpacity(0.06)),
+
+            // Value comparison
+            Padding(
+              padding: EdgeInsets.all(16.w),
+              child: Row(
+                children: [
+                  // Doc 1
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6366F1).withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(6.r),
+                          ),
+                          child: Text(
+                            tr('DOCUMENT 1', isHindi),
+                            style: GoogleFonts.inter(
+                              fontSize: 9.sp,
+                              color: const Color(0xFF6366F1),
+                              letterSpacing: 0.8,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          doc1Value,
+                          style: GoogleFonts.inter(
+                            fontSize: 13.sp,
+                            color: textColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                VerticalDivider(
-                  width: 32.w,
-                  thickness: 1.w,
-                  color: colorScheme.onSurface.withOpacity(0.24),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(tr('DOCUMENT 2', isHindi), style: GoogleFonts.inter(fontSize: 11.sp, color: colorScheme.onSurface.withOpacity(0.54), letterSpacing: 1.0, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 6.h),
-                      Text(doc2Value, style: GoogleFonts.inter(fontSize: 14.sp, color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                    ],
+
+                  // VS separator
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 1.w,
+                          height: 16.h,
+                          color: colorScheme.onSurface.withOpacity(0.1),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4.h),
+                          child: Text(
+                            'VS',
+                            style: GoogleFonts.inter(
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.w700,
+                              color: textDimColor.withOpacity(0.5),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          width: 1.w,
+                          height: 16.h,
+                          color: colorScheme.onSurface.withOpacity(0.1),
+                        ),
+                      ],
+                    ),
                   ),
+
+                  // Doc 2
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B5CF6).withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(6.r),
+                          ),
+                          child: Text(
+                            tr('DOCUMENT 2', isHindi),
+                            style: GoogleFonts.inter(
+                              fontSize: 9.sp,
+                              color: const Color(0xFF8B5CF6),
+                              letterSpacing: 0.8,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          doc2Value,
+                          style: GoogleFonts.inter(
+                            fontSize: 13.sp,
+                            color: status == 'Mismatch'
+                                ? const Color(0xFFEF4444)
+                                : textColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons({
+    required BuildContext context,
+    required ColorScheme colorScheme,
+    required bool isDark,
+    required Color textColor,
+    required bool isHindi,
+    required bool isMatch,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Download PDF
+        AnimatedScaleButton(
+          onTap: () => _generatePdf(context),
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 18.h),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [colorScheme.primary, colorScheme.secondary],
+              ),
+              borderRadius: BorderRadius.circular(18.r),
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.primary.withOpacity(0.4),
+                  blurRadius: 20.r,
+                  offset: Offset(0, 8.h),
+                  spreadRadius: -2,
                 ),
               ],
             ),
-          )
-        ],
-      ),
-      ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.download_rounded, color: Colors.white, size: 20.sp),
+                SizedBox(width: 8.w),
+                Text(
+                  tr('Download Report', isHindi),
+                  style: GoogleFonts.inter(
+                      fontSize: 16.sp, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 12.h),
+
+        // Back to Dashboard
+        AnimatedScaleButton(
+          onTap: () => Navigator.popUntil(context, (route) => route.isFirst),
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 16.h),
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withOpacity(isDark ? 0.1 : 0.06),
+              borderRadius: BorderRadius.circular(18.r),
+              border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.home_rounded, color: colorScheme.primary, size: 18.sp),
+                SizedBox(width: 8.w),
+                Text(
+                  tr('Back to Dashboard', isHindi),
+                  style: GoogleFonts.inter(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.primary),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 12.h),
+
+        // Re-upload
+        Center(
+          child: TextButton.icon(
+            onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
+            icon: Icon(Icons.upload_file_rounded,
+                color: textColor.withOpacity(0.4), size: 16.sp),
+            label: Text(
+              tr('Re-upload Documents', isHindi),
+              style: GoogleFonts.inter(
+                fontSize: 14.sp,
+                color: textColor.withOpacity(0.4),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

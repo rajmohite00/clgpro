@@ -160,6 +160,52 @@ String tr(String text, bool isHindi) {
     'Reset Password': 'अपना पासवर्ड बदलें',
     'Enter your email address to receive a password reset link.': 'नया पासवर्ड बनाने के लिए अपना ईमेल डालें।',
     'Send Reset Link': 'लिंक मंगाएं',
+
+    // Edit Profile Screen
+    'Edit Profile': 'प्रोफ़ाइल बदलें',
+    'Update your personal information': 'अपनी जानकारी अपडेट करें',
+    'Save Changes': 'बदलाव सेव करें',
+    'Profile updated successfully!': 'प्रोफ़ाइल अपडेट हो गई!',
+    'Error updating profile. Please try again.': 'प्रोफ़ाइल अपडेट में दिक्कत। फिर से कोशिश करें।',
+    'Fields cannot be empty': 'सभी खाने भरना ज़रूरी है',
+
+    // Change Password Screen
+    'Use a strong password to keep your account secure.': 'अपना अकाउंट सुरक्षित रखने के लिए मज़बूत पासवर्ड बनाएं।',
+    'Current Password': 'पुराना पासवर्ड',
+    'New Password': 'नया पासवर्ड',
+    'Confirm New Password': 'नया पासवर्ड दोबारा डालें',
+    'Password must be at least 6 characters long.': 'पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।',
+    'Update Password': 'पासवर्ड बदलें',
+    'Password changed successfully!': 'पासवर्ड बदल गया!',
+    'Passwords do not match': 'दोनों पासवर्ड एक जैसे नहीं हैं',
+
+    // Profile Screen
+    'Confirm Logout': 'लॉगआउट की पुष्टि करें',
+    'Are you sure you want to log out?': 'क्या आप वाकई लॉगआउट करना चाहते हैं?',
+    'Cancel': 'रद्द करें',
+    'Logged out successfully': 'लॉगआउट हो गए',
+    'Verified User': 'वेरिफाइड यूजर',
+
+    // Login/Auth
+    'New here?': 'पहली बार आए हैं?',
+    'Processing details...': 'विवरण संसाधित हो रहा है...',
+    'Scanning document...': 'डॉक्यूमेंट स्कैन हो रहा है...',
+    'Extracting data...': 'डेटा निकाला जा रहा है...',
+    'Analyzing authenticity...': 'असलियत जांची जा रही है...',
+    'Generating report': 'रिपोर्ट बन रही है',
+    'Fraud Risk Score': 'धोखाधड़ी जोखिम स्कोर',
+    'Comparison Options': 'तुलना के विकल्प',
+    'Copy Details': 'जानकारी कॉपी करें',
+    'Share': 'शेयर करें',
+    'Save Field': 'फील्ड सेव करें',
+    'Uploaded Documents': 'अपलोड किए डॉक्यूमेंट',
+    'Verified': 'सत्यापित',
+
+    'See all': 'सभी देखें',
+    'Good Morning': 'सुप्रभात',
+    'Good Afternoon': 'नमस्ते',
+    'Good Evening': 'शुभ संध्या',
+    'Ready to scan a document?': 'क्या आप एक डॉक्यूमेंट स्कैन करने के लिए तैयार हैं?',
   };
 
   return map[text] ?? text;
