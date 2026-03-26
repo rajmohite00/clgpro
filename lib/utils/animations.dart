@@ -229,18 +229,18 @@ class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     _color1 = ColorTween(
-      begin: isDark ? const Color(0xFF0F0C29) : const Color(0xFFEFF6FF),
-      end: isDark ? const Color(0xFF1A0533) : const Color(0xFFF5F3FF),
+      begin: isDark ? const Color(0xFF0F172A) : const Color(0xFFEFF6FF),
+      end: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
     ).animate(_controller);
 
     _color2 = ColorTween(
-      begin: isDark ? const Color(0xFF302B63) : const Color(0xFFEDE9FE),
-      end: isDark ? const Color(0xFF43116A) : const Color(0xFFDCFCE7),
+      begin: isDark ? const Color(0xFF1E3A5F) : const Color(0xFFDBEAFE),
+      end: isDark ? const Color(0xFF0F172A) : const Color(0xFFEFF6FF),
     ).animate(_controller);
 
     _color3 = ColorTween(
-      begin: isDark ? const Color(0xFF24243e) : const Color(0xFFFDF4FF),
-      end: isDark ? const Color(0xFF0F0C29) : const Color(0xFFEFF6FF),
+      begin: isDark ? const Color(0xFF172554) : const Color(0xFFF0F9FF),
+      end: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
     ).animate(_controller);
   }
 
@@ -427,7 +427,7 @@ class FloatingOrbsBackground extends StatefulWidget {
   const FloatingOrbsBackground({
     Key? key,
     required this.child,
-    this.orbColors = const [Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFF06B6D4)],
+    this.orbColors = const [Color(0xFF3B82F6), Color(0xFF1D4ED8), Color(0xFF60A5FA)],
   }) : super(key: key);
 
   @override

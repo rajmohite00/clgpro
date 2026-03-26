@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'utils/animations.dart';
 import 'providers/settings_provider.dart';
+import 'providers/theme_provider.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -18,43 +19,20 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _nameFocus = FocusNode();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+  final _confirmFocus = FocusNode();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white, size: 18),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message, style: GoogleFonts.inter(color: Colors.white))),
-          ],
-        ),
-        backgroundColor: const Color(0xFFEF4444),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-        margin: EdgeInsets.all(16.w),
-      ),
-    );
-  }
-
-  void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message, style: GoogleFonts.inter(color: Colors.white))),
-          ],
-        ),
-        backgroundColor: const Color(0xFF10B981),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-        margin: EdgeInsets.all(16.w),
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _nameFocus.addListener(() => setState(() {}));
+    _emailFocus.addListener(() => setState(() {}));
+    _passwordFocus.addListener(() => setState(() {}));
+    _confirmFocus.addListener(() => setState(() {}));
   }
 
   @override
@@ -63,7 +41,39 @@ class _SignupScreenState extends State<SignupScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _nameFocus.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
+    _confirmFocus.dispose();
     super.dispose();
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(children: [
+        const Icon(Icons.error_outline, color: Colors.white, size: 18),
+        const SizedBox(width: 10),
+        Expanded(child: Text(message, style: GoogleFonts.inter(color: Colors.white))),
+      ]),
+      backgroundColor: AppTheme.error,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      margin: EdgeInsets.all(16.w),
+    ));
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(children: [
+        const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+        const SizedBox(width: 10),
+        Expanded(child: Text(message, style: GoogleFonts.inter(color: Colors.white))),
+      ]),
+      backgroundColor: AppTheme.success,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      margin: EdgeInsets.all(16.w),
+    ));
   }
 
   @override
@@ -72,240 +82,176 @@ class _SignupScreenState extends State<SignupScreen> {
     final settings = Provider.of<SettingsProvider>(context);
     final isHindi = settings.isHindi;
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
+    final bgColor = isDark ? AppTheme.primary : AppTheme.neutral;
+    final cardColor = isDark ? AppTheme.surfaceDark : Colors.white;
+    final textColor = isDark ? Colors.white : AppTheme.textPrimary;
+    final mutedColor = isDark ? Colors.white54 : AppTheme.textSecondary;
+    final borderColor = isDark ? AppTheme.borderDark : AppTheme.borderLight;
+
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      extendBodyBehindAppBar: true,
+      backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: isDark ? AppTheme.primary : Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: Container(
             padding: EdgeInsets.all(8.w),
             decoration: BoxDecoration(
-              color: colorScheme.onSurface.withOpacity(0.06),
+              color: isDark ? Colors.white.withOpacity(0.08) : AppTheme.neutral,
               borderRadius: BorderRadius.circular(10.r),
-              border: Border.all(color: colorScheme.onSurface.withOpacity(0.1)),
+              border: Border.all(color: borderColor),
             ),
-            child: Icon(Icons.arrow_back_ios_new_rounded, color: colorScheme.onSurface, size: 16.sp),
+            child: Icon(Icons.arrow_back_ios_new_rounded, color: textColor, size: 14.sp),
           ),
           onPressed: () => Navigator.pop(context),
         ),
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(1.h),
+          child: Divider(height: 1, color: borderColor),
+        ),
       ),
-      body: FloatingOrbsBackground(
-        orbColors: isDark
-            ? [const Color(0xFF6366F1), const Color(0xFF8B5CF6), const Color(0xFF06B6D4)]
-            : [const Color(0xFF818CF8), const Color(0xFFA78BFA), const Color(0xFF67E8F9)],
-        child: AnimatedGradientBackground(
-          child: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 24.0.w, vertical: 20.h),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 450),
-                  child: GlassContainer(
-                    padding: EdgeInsets.all(32.w),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Logo — 3-ring premium design
-                        StaggeredListItem(
-                          index: 0,
-                          child: Center(
-                            child: SizedBox(
-                              width: 110.w,
-                              height: 110.w,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // Outer glow ring
-                                  Container(
-                                    width: 110.w,
-                                    height: 110.w,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient: RadialGradient(
-                                        colors: [
-                                          colorScheme.primary.withOpacity(0.22),
-                                          colorScheme.secondary.withOpacity(0.08),
-                                          Colors.transparent,
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  // Middle border ring
-                                  Container(
-                                    width: 86.w,
-                                    height: 86.w,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: colorScheme.primary.withOpacity(0.3),
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                  // Core gradient circle + icon
-                                  Container(
-                                    width: 64.w,
-                                    height: 64.w,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          colorScheme.primary,
-                                          colorScheme.secondary,
-                                        ],
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: colorScheme.primary.withOpacity(0.45),
-                                          blurRadius: 22.r,
-                                          spreadRadius: 3.r,
-                                        ),
-                                        BoxShadow(
-                                          color: colorScheme.secondary.withOpacity(0.25),
-                                          blurRadius: 44.r,
-                                          spreadRadius: 8.r,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Icon(
-                                      Icons.person_add_rounded,
-                                      size: 28.sp,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  // Verified badge bottom-right
-                                  Positioned(
-                                    right: 8.w,
-                                    bottom: 8.w,
-                                    child: Container(
-                                      padding: EdgeInsets.all(3.w),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: const Color(0xFF10B981),
-                                        border: Border.all(
-                                          color: isDark
-                                              ? const Color(0xFF0F0E1A)
-                                              : Colors.white,
-                                          width: 2,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: const Color(0xFF10B981)
-                                                .withOpacity(0.45),
-                                            blurRadius: 8.r,
-                                          ),
-                                        ],
-                                      ),
-                                      child: Icon(
-                                        Icons.star_rounded,
-                                        size: 11.sp,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Header ─────────────────────────────────────────────
+                  StaggeredListItem(
+                    index: 0,
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 64.w,
+                            height: 64.w,
+                            decoration: BoxDecoration(
+                              color: AppTheme.secondary,
+                              borderRadius: BorderRadius.circular(18.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.secondary.withOpacity(0.25),
+                                  blurRadius: 16.r,
+                                  offset: Offset(0, 6.h),
+                                ),
+                              ],
                             ),
+                            child: Icon(Icons.person_add_rounded, size: 28.sp, color: Colors.white),
                           ),
-                        ),
-                        SizedBox(height: 16.h),
-
-                        StaggeredListItem(
-                          index: 1,
-                          child: Text(
+                          SizedBox(height: 16.h),
+                          Text(
                             tr('Create Account', isHindi),
                             style: GoogleFonts.inter(
-                              fontSize: 28.sp,
+                              fontSize: 24.sp,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: -0.8,
-                              color: colorScheme.onSurface,
+                              color: textColor,
+                              letterSpacing: -0.5,
                             ),
-                            textAlign: TextAlign.center,
                           ),
-                        ),
-                        SizedBox(height: 6.h),
-                        StaggeredListItem(
-                          index: 2,
-                          child: Text(
-                            tr('Join us to get started', isHindi),
-                            style: GoogleFonts.inter(
-                              fontSize: 14.sp,
-                              color: colorScheme.onSurface.withOpacity(0.5),
-                            ),
-                            textAlign: TextAlign.center,
+                          SizedBox(height: 4.h),
+                          Text(
+                            tr('Join DocVerify to get started', isHindi),
+                            style: GoogleFonts.inter(fontSize: 13.sp, color: mutedColor),
                           ),
-                        ),
-                        SizedBox(height: 32.h),
+                        ],
+                      ),
+                    ),
+                  ),
 
-                        StaggeredListItem(
-                          index: 3,
-                          child: _buildTextField(
+                  SizedBox(height: 32.h),
+
+                  // ── Form Card ──────────────────────────────────────────
+                  StaggeredListItem(
+                    index: 1,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(24.r),
+                        border: Border.all(color: borderColor),
+                        boxShadow: isDark
+                            ? []
+                            : [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 20.r,
+                                  offset: Offset(0, 4.h),
+                                ),
+                              ],
+                      ),
+                      padding: EdgeInsets.all(24.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildLabel(tr('Full Name', isHindi), textColor),
+                          SizedBox(height: 8.h),
+                          _buildTextField(
                             controller: _nameController,
-                            label: tr('Full Name', isHindi),
+                            focusNode: _nameFocus,
+                            hint: tr('Your full name', isHindi),
                             icon: Icons.person_outline_rounded,
-                            theme: theme,
-                            colorScheme: colorScheme,
+                            isDark: isDark,
+                            textColor: textColor,
+                            borderColor: borderColor,
                           ),
-                        ),
-                        SizedBox(height: 14.h),
+                          SizedBox(height: 18.h),
 
-                        StaggeredListItem(
-                          index: 4,
-                          child: _buildTextField(
+                          _buildLabel(tr('Email Address', isHindi), textColor),
+                          SizedBox(height: 8.h),
+                          _buildTextField(
                             controller: _emailController,
-                            label: tr('Email Address', isHindi),
+                            focusNode: _emailFocus,
+                            hint: 'you@example.com',
                             icon: Icons.alternate_email_rounded,
                             keyboardType: TextInputType.emailAddress,
-                            theme: theme,
-                            colorScheme: colorScheme,
+                            isDark: isDark,
+                            textColor: textColor,
+                            borderColor: borderColor,
                           ),
-                        ),
-                        SizedBox(height: 14.h),
+                          SizedBox(height: 18.h),
 
-                        StaggeredListItem(
-                          index: 5,
-                          child: _buildTextField(
+                          _buildLabel(tr('Password', isHindi), textColor),
+                          SizedBox(height: 8.h),
+                          _buildTextField(
                             controller: _passwordController,
-                            label: tr('Password', isHindi),
+                            focusNode: _passwordFocus,
+                            hint: '••••••••',
                             icon: Icons.lock_outline_rounded,
                             isPassword: true,
                             isConfirm: false,
-                            theme: theme,
-                            colorScheme: colorScheme,
+                            isDark: isDark,
+                            textColor: textColor,
+                            borderColor: borderColor,
                           ),
-                        ),
-                        SizedBox(height: 14.h),
+                          SizedBox(height: 18.h),
 
-                        StaggeredListItem(
-                          index: 6,
-                          child: _buildTextField(
+                          _buildLabel(tr('Confirm Password', isHindi), textColor),
+                          SizedBox(height: 8.h),
+                          _buildTextField(
                             controller: _confirmPasswordController,
-                            label: tr('Confirm Password', isHindi),
+                            focusNode: _confirmFocus,
+                            hint: '••••••••',
                             icon: Icons.lock_outline_rounded,
                             isPassword: true,
                             isConfirm: true,
-                            theme: theme,
-                            colorScheme: colorScheme,
+                            isDark: isDark,
+                            textColor: textColor,
+                            borderColor: borderColor,
                           ),
-                        ),
-                        SizedBox(height: 32.h),
+                          SizedBox(height: 28.h),
 
-                        StaggeredListItem(
-                          index: 7,
-                          child: AnimatedScaleButton(
+                          // Submit Button
+                          AnimatedScaleButton(
                             onTap: authProvider.isLoading
                                 ? () {}
                                 : () async {
                                     if (_passwordController.text != _confirmPasswordController.text) {
-                                      _showError("Passwords do not match");
+                                      _showError('Passwords do not match');
                                       return;
                                     }
                                     final success = await authProvider.signup(
@@ -315,54 +261,75 @@ class _SignupScreenState extends State<SignupScreen> {
                                     );
                                     if (success) {
                                       if (!mounted) return;
-                                      _showSuccess("Account created successfully!");
+                                      _showSuccess('Account created successfully!');
                                       Navigator.pop(context);
                                     } else if (authProvider.errorMessage != null) {
                                       _showError(authProvider.errorMessage!);
                                     }
                                   },
                             child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 18.h),
+                              height: 52.h,
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [colorScheme.primary, colorScheme.secondary],
-                                ),
-                                borderRadius: BorderRadius.circular(16.r),
+                                color: AppTheme.secondary,
+                                borderRadius: BorderRadius.circular(14.r),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: colorScheme.primary.withOpacity(0.4),
-                                    blurRadius: 20.r,
-                                    offset: Offset(0, 8.h),
-                                    spreadRadius: -2,
+                                    color: AppTheme.secondary.withOpacity(0.30),
+                                    blurRadius: 16.r,
+                                    offset: Offset(0, 6.h),
                                   ),
                                 ],
                               ),
                               alignment: Alignment.center,
                               child: authProvider.isLoading
-                                  ? SizedBox(
-                                      height: 24.h,
-                                      width: 24.w,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5.w),
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                                     )
                                   : Text(
-                                      tr('Sign Up', isHindi),
+                                      tr('Create Account', isHindi),
                                       style: GoogleFonts.inter(
-                                        fontSize: 16.sp,
+                                        fontSize: 15.sp,
                                         fontWeight: FontWeight.w700,
                                         color: Colors.white,
-                                        letterSpacing: 0.3,
+                                        letterSpacing: 0.2,
                                       ),
                                     ),
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 20.h),
+
+                  StaggeredListItem(
+                    index: 2,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          tr('Already have an account? ', isHindi),
+                          style: GoogleFonts.inter(fontSize: 14.sp, color: mutedColor),
                         ),
-                        SizedBox(height: 20.h),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Text(
+                            tr('Sign in', isHindi),
+                            style: GoogleFonts.inter(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.secondary,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ),
+                  SizedBox(height: 16.h),
+                ],
               ),
             ),
           ),
@@ -371,69 +338,77 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
+  Widget _buildLabel(String text, Color color) {
+    return Text(
+      text,
+      style: GoogleFonts.inter(fontSize: 13.sp, fontWeight: FontWeight.w600, color: color),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
-    required String label,
+    required String hint,
     required IconData icon,
-    required ThemeData theme,
-    required ColorScheme colorScheme,
+    required bool isDark,
+    required Color textColor,
+    required Color borderColor,
+    FocusNode? focusNode,
     bool isPassword = false,
     bool isConfirm = false,
     TextInputType keyboardType = TextInputType.text,
   }) {
-    final isDark = theme.brightness == Brightness.dark;
+    final isFocused = focusNode?.hasFocus ?? false;
     final visible = isConfirm ? _isConfirmPasswordVisible : _isPasswordVisible;
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.06) : Colors.white.withOpacity(0.85),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: colorScheme.onSurface.withOpacity(0.1)),
+        color: isDark ? Colors.white.withOpacity(0.05) : AppTheme.neutral,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: isFocused ? AppTheme.secondary : borderColor,
+          width: isFocused ? 1.5 : 1,
+        ),
+        boxShadow: isFocused
+            ? [BoxShadow(color: AppTheme.secondary.withOpacity(0.10), blurRadius: 8.r)]
+            : null,
       ),
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         obscureText: isPassword && !visible,
         keyboardType: keyboardType,
-        style: GoogleFonts.inter(
-          color: colorScheme.onSurface,
-          fontWeight: FontWeight.w500,
-          fontSize: 15.sp,
-        ),
-        cursorColor: colorScheme.primary,
+        style: GoogleFonts.inter(color: textColor, fontSize: 14.sp, fontWeight: FontWeight.w500),
+        cursorColor: AppTheme.secondary,
         decoration: InputDecoration(
-          labelText: label,
-          labelStyle: GoogleFonts.inter(color: colorScheme.onSurface.withOpacity(0.45), fontSize: 14.sp),
-          prefixIcon: Container(
-            padding: EdgeInsets.all(14.w),
-            child: Icon(icon, color: colorScheme.primary.withOpacity(0.7), size: 20.sp),
+          hintText: hint,
+          hintStyle: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 14.sp),
+          prefixIcon: Icon(
+            icon,
+            color: isFocused ? AppTheme.secondary : AppTheme.textMuted,
+            size: 18.sp,
           ),
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
                     visible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-                    color: colorScheme.onSurface.withOpacity(0.4),
-                    size: 20.sp,
+                    color: AppTheme.textMuted,
+                    size: 18.sp,
                   ),
-                  onPressed: () {
-                    setState(() {
-                      if (isConfirm) {
-                        _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-                      } else {
-                        _isPasswordVisible = !_isPasswordVisible;
-                      }
-                    });
-                  },
+                  onPressed: () => setState(() {
+                    if (isConfirm) {
+                      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                    } else {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    }
+                  }),
                 )
               : null,
           filled: true,
           fillColor: Colors.transparent,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 18.h),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16.r), borderSide: BorderSide.none),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16.r), borderSide: BorderSide.none),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16.r),
-            borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.7), width: 1.5.w),
-          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide.none),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide.none),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide.none),
         ),
       ),
     );

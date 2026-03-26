@@ -8,6 +8,7 @@ import 'forgot_password_screen.dart';
 import 'dashboard_screen.dart';
 import 'utils/animations.dart';
 import 'providers/settings_provider.dart';
+import 'providers/theme_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,6 +23,13 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isPasswordVisible = false;
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _emailFocus.addListener(() => setState(() {}));
+    _passwordFocus.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
@@ -42,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Expanded(child: Text(message, style: GoogleFonts.inter(color: Colors.white))),
           ],
         ),
-        backgroundColor: const Color(0xFFEF4444),
+        backgroundColor: AppTheme.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         margin: EdgeInsets.all(16.w),
@@ -59,270 +67,166 @@ class _LoginScreenState extends State<LoginScreen> {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
+    final bgColor = isDark ? AppTheme.primary : AppTheme.neutral;
+    final cardColor = isDark ? AppTheme.surfaceDark : Colors.white;
+    final textColor = isDark ? Colors.white : AppTheme.textPrimary;
+    final mutedColor = isDark ? Colors.white54 : AppTheme.textSecondary;
+    final borderColor = isDark ? AppTheme.borderDark : AppTheme.borderLight;
+
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: FloatingOrbsBackground(
-        orbColors: isDark
-            ? [const Color(0xFF6366F1), const Color(0xFF8B5CF6), const Color(0xFF06B6D4)]
-            : [const Color(0xFF818CF8), const Color(0xFFA78BFA), const Color(0xFF67E8F9)],
-        child: AnimatedGradientBackground(
-          child: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 24.0.w, vertical: 48.0.h),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: GlassContainer(
-                    padding: EdgeInsets.all(36.w),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Logo + App Name
-                        StaggeredListItem(
-                          index: 0,
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Logo widget — 3 rings + icon + badge
-                                SizedBox(
-                                  width: 110.w,
-                                  height: 110.w,
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      // Outer glow ring
-                                      Container(
-                                        width: 110.w,
-                                        height: 110.w,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          gradient: RadialGradient(
-                                            colors: [
-                                              colorScheme.primary.withOpacity(0.22),
-                                              colorScheme.secondary.withOpacity(0.08),
-                                              Colors.transparent,
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      // Middle border ring
-                                      Container(
-                                        width: 86.w,
-                                        height: 86.w,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: colorScheme.primary.withOpacity(0.3),
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                      ),
-                                      // Core gradient circle + icon
-                                      Container(
-                                        width: 64.w,
-                                        height: 64.w,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                            colors: [
-                                              colorScheme.primary,
-                                              colorScheme.secondary,
-                                            ],
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: colorScheme.primary.withOpacity(0.45),
-                                              blurRadius: 22.r,
-                                              spreadRadius: 3.r,
-                                            ),
-                                            BoxShadow(
-                                              color: colorScheme.secondary.withOpacity(0.25),
-                                              blurRadius: 44.r,
-                                              spreadRadius: 8.r,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Icon(
-                                          Icons.document_scanner_rounded,
-                                          size: 28.sp,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      // Verified badge bottom-right
-                                      Positioned(
-                                        right: 8.w,
-                                        bottom: 8.w,
-                                        child: Container(
-                                          padding: EdgeInsets.all(3.w),
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: const Color(0xFF10B981),
-                                            border: Border.all(
-                                              color: isDark
-                                                  ? const Color(0xFF0F0E1A)
-                                                  : Colors.white,
-                                              width: 2,
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: const Color(0xFF10B981)
-                                                    .withOpacity(0.45),
-                                                blurRadius: 8.r,
-                                              ),
-                                            ],
-                                          ),
-                                          child: Icon(
-                                            Icons.verified_rounded,
-                                            size: 11.sp,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                SizedBox(height: 14.h),
-                                // App name gradient text
-                                ShaderMask(
-                                  shaderCallback: (bounds) => LinearGradient(
-                                    colors: [
-                                      colorScheme.primary,
-                                      colorScheme.secondary,
-                                    ],
-                                  ).createShader(bounds),
-                                  child: Text(
-                                    'Smart Document Detective',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 17.sp,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: -0.3,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: 5.h),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 12.w, vertical: 4.h),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primary.withOpacity(0.09),
-                                    borderRadius: BorderRadius.circular(20.r),
-                                    border: Border.all(
-                                        color: colorScheme.primary.withOpacity(0.18)),
-                                  ),
-                                  child: Text(
-                                    'AI  •  Secure  •  Fast',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 10.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: colorScheme.primary.withOpacity(0.8),
-                                      letterSpacing: 1.5,
-                                    ),
-                                  ),
+      backgroundColor: bgColor,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Logo & Brand ────────────────────────────────────────
+                  StaggeredListItem(
+                    index: 0,
+                    child: Center(
+                      child: Column(
+                        children: [
+                          // Logo icon
+                          Container(
+                            width: 72.w,
+                            height: 72.w,
+                            decoration: BoxDecoration(
+                              color: AppTheme.secondary,
+                              borderRadius: BorderRadius.circular(20.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.secondary.withOpacity(0.25),
+                                  blurRadius: 20.r,
+                                  offset: Offset(0, 8.h),
                                 ),
                               ],
                             ),
-                          ),
-                        ),
-                        SizedBox(height: 28.h),
-
-                        // Header
-                        StaggeredListItem(
-                          index: 1,
-                          child: Text(
-                            tr('Welcome Back', isHindi),
-                            style: GoogleFonts.inter(
-                              fontSize: 30.sp,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.8,
-                              color: colorScheme.onSurface,
+                            child: Icon(
+                              Icons.document_scanner_rounded,
+                              size: 32.sp,
+                              color: Colors.white,
                             ),
-                            textAlign: TextAlign.center,
                           ),
-                        ),
-                        SizedBox(height: 6.h),
-                        StaggeredListItem(
-                          index: 2,
-                          child: Text(
-                            tr('Please enter your details to sign in.', isHindi),
+                          SizedBox(height: 16.h),
+                          Text(
+                            'DocVerify',
+                            style: GoogleFonts.inter(
+                              fontSize: 26.sp,
+                              fontWeight: FontWeight.w800,
+                              color: textColor,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            tr('AI-Powered Document Analysis', isHindi),
+                            style: GoogleFonts.inter(
+                              fontSize: 13.sp,
+                              color: mutedColor,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 40.h),
+
+                  // ── Card ──────────────────────────────────────────────
+                  StaggeredListItem(
+                    index: 1,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(24.r),
+                        border: Border.all(color: borderColor),
+                        boxShadow: isDark
+                            ? []
+                            : [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 20.r,
+                                  offset: Offset(0, 4.h),
+                                ),
+                              ],
+                      ),
+                      padding: EdgeInsets.all(28.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            tr('Welcome back', isHindi),
+                            style: GoogleFonts.inter(
+                              fontSize: 22.sp,
+                              fontWeight: FontWeight.w700,
+                              color: textColor,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            tr('Sign in to your account', isHindi),
                             style: GoogleFonts.inter(
                               fontSize: 14.sp,
-                              color: colorScheme.onSurface.withOpacity(0.55),
-                              height: 1.5,
+                              color: mutedColor,
                             ),
-                            textAlign: TextAlign.center,
                           ),
-                        ),
-                        SizedBox(height: 36.h),
+                          SizedBox(height: 28.h),
 
-                        // Email Field
-                        StaggeredListItem(
-                          index: 3,
-                          child: _buildTextField(
+                          // Email
+                          _buildLabel(tr('Email address', isHindi), textColor),
+                          SizedBox(height: 8.h),
+                          _buildTextField(
                             controller: _emailController,
                             focusNode: _emailFocus,
-                            label: tr('Email', isHindi),
+                            hint: 'you@example.com',
                             icon: Icons.alternate_email_rounded,
                             keyboardType: TextInputType.emailAddress,
-                            colorScheme: colorScheme,
-                            theme: theme,
+                            isDark: isDark,
+                            textColor: textColor,
+                            borderColor: borderColor,
                           ),
-                        ),
-                        SizedBox(height: 16.h),
+                          SizedBox(height: 20.h),
 
-                        // Password Field
-                        StaggeredListItem(
-                          index: 4,
-                          child: _buildTextField(
+                          // Password
+                          _buildLabel(tr('Password', isHindi), textColor),
+                          SizedBox(height: 8.h),
+                          _buildTextField(
                             controller: _passwordController,
                             focusNode: _passwordFocus,
-                            label: tr('Password', isHindi),
+                            hint: '••••••••',
                             icon: Icons.lock_outline_rounded,
                             isPassword: true,
-                            colorScheme: colorScheme,
-                            theme: theme,
+                            isDark: isDark,
+                            textColor: textColor,
+                            borderColor: borderColor,
                           ),
-                        ),
 
-                        // Forgot Password
-                        StaggeredListItem(
-                          index: 5,
-                          child: Align(
+                          SizedBox(height: 12.h),
+                          Align(
                             alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const ForgotPasswordScreen(),
-                                  ),
-                                );
-                              },
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
-                                minimumSize: Size.zero,
-                              ),
+                            child: GestureDetector(
+                              onTap: () => Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
                               child: Text(
                                 tr('Forgot password?', isHindi),
                                 style: GoogleFonts.inter(
-                                  color: colorScheme.primary,
+                                  color: AppTheme.secondary,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 13.sp,
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                        SizedBox(height: 24.h),
+                          SizedBox(height: 28.h),
 
-                        // Login Button
-                        StaggeredListItem(
-                          index: 6,
-                          child: AnimatedScaleButton(
+                          // Sign In Button
+                          AnimatedScaleButton(
                             onTap: authProvider.isLoading
                                 ? () {}
                                 : () async {
@@ -332,34 +236,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                     );
                                     if (success) {
                                       if (!mounted) return;
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => const DashboardScreen(),
-                                        ),
-                                      );
+                                      Navigator.pushReplacement(context,
+                                          MaterialPageRoute(builder: (_) => const DashboardScreen()));
                                     } else if (authProvider.errorMessage != null) {
                                       _showError(authProvider.errorMessage!);
                                     }
                                   },
                             child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 18.h),
+                              height: 52.h,
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    colorScheme.primary,
-                                    colorScheme.secondary,
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(16.r),
+                                color: AppTheme.secondary,
+                                borderRadius: BorderRadius.circular(14.r),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: colorScheme.primary.withOpacity(0.4),
-                                    blurRadius: 20.r,
-                                    offset: Offset(0, 8.h),
-                                    spreadRadius: -2,
+                                    color: AppTheme.secondary.withOpacity(0.30),
+                                    blurRadius: 16.r,
+                                    offset: Offset(0, 6.h),
                                   ),
                                 ],
                               ),
@@ -368,111 +260,59 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ? SizedBox(
                                       height: 20.h,
                                       width: 20.w,
-                                      child: CircularProgressIndicator(
+                                      child: const CircularProgressIndicator(
                                         color: Colors.white,
-                                        strokeWidth: 2.5.w,
+                                        strokeWidth: 2.5,
                                       ),
                                     )
                                   : Text(
                                       tr('Sign in', isHindi),
                                       style: GoogleFonts.inter(
-                                        fontSize: 16.sp,
+                                        fontSize: 15.sp,
                                         fontWeight: FontWeight.w700,
                                         color: Colors.white,
-                                        letterSpacing: 0.3,
+                                        letterSpacing: 0.2,
                                       ),
                                     ),
                             ),
                           ),
-                        ),
-                        SizedBox(height: 28.h),
+                        ],
+                      ),
+                    ),
+                  ),
 
-                        // Signup Navigation
-                        StaggeredListItem(
-                          index: 7,
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Expanded(
-                                      child: Container(
-                                        height: 1.h,
-                                        color: colorScheme.onSurface.withOpacity(0.1),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 12.w),
-                                      child: Text(
-                                        tr('New here?', isHindi),
-                                        style: GoogleFonts.inter(
-                                          color: colorScheme.onSurface.withOpacity(0.4),
-                                          fontSize: 12.sp,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Container(
-                                        height: 1.h,
-                                        color: colorScheme.onSurface.withOpacity(0.1),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 14.h),
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const SignupScreen(),
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: 28.w, vertical: 14.h),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.onSurface.withOpacity(0.05),
-                                      borderRadius: BorderRadius.circular(14.r),
-                                      border: Border.all(
-                                          color: colorScheme.primary.withOpacity(0.25)),
-                                    ),
-                                    child: RichText(
-                                      text: TextSpan(
-                                        style: GoogleFonts.inter(
-                                            fontSize: 14.sp),
-                                        children: [
-                                          TextSpan(
-                                            text: tr("Don't have an account? ", isHindi),
-                                            style: TextStyle(
-                                              color: colorScheme.onSurface
-                                                  .withOpacity(0.55),
-                                            ),
-                                          ),
-                                          TextSpan(
-                                            text: tr('Sign up', isHindi),
-                                            style: TextStyle(
-                                              color: colorScheme.primary,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                  SizedBox(height: 20.h),
+
+                  // ── Sign Up Link ──────────────────────────────────────
+                  StaggeredListItem(
+                    index: 2,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          tr("Don't have an account? ", isHindi),
+                          style: GoogleFonts.inter(
+                            fontSize: 14.sp,
+                            color: mutedColor,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => const SignupScreen())),
+                          child: Text(
+                            tr('Sign up', isHindi),
+                            style: GoogleFonts.inter(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.secondary,
                             ),
                           ),
                         ),
-                        SizedBox(height: 8.h),
                       ],
                     ),
                   ),
-                ),
+                  SizedBox(height: 16.h),
+                ],
               ),
             ),
           ),
@@ -481,37 +321,47 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Widget _buildLabel(String text, Color color) {
+    return Text(
+      text,
+      style: GoogleFonts.inter(
+        fontSize: 13.sp,
+        fontWeight: FontWeight.w600,
+        color: color,
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
-    required String label,
+    required String hint,
     required IconData icon,
-    required ColorScheme colorScheme,
-    required ThemeData theme,
+    required bool isDark,
+    required Color textColor,
+    required Color borderColor,
     FocusNode? focusNode,
     bool isPassword = false,
     TextInputType keyboardType = TextInputType.text,
   }) {
-    final isDark = theme.brightness == Brightness.dark;
     final isFocused = focusNode?.hasFocus ?? false;
+    final fillColor = isDark
+        ? Colors.white.withOpacity(0.05)
+        : AppTheme.neutral;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+    return Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.07) : Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(16.r),
+        color: fillColor,
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-          color: isFocused
-              ? colorScheme.primary.withOpacity(0.7)
-              : colorScheme.onSurface.withOpacity(0.1),
-          width: isFocused ? 1.5.w : 1.w,
+          color: isFocused ? AppTheme.secondary : borderColor,
+          width: isFocused ? 1.5 : 1,
         ),
         boxShadow: isFocused
             ? [
                 BoxShadow(
-                  color: colorScheme.primary.withOpacity(0.12),
-                  blurRadius: 12.r,
-                  spreadRadius: 0,
-                ),
+                  color: AppTheme.secondary.withOpacity(0.10),
+                  blurRadius: 8.r,
+                )
               ]
             : null,
       ),
@@ -521,61 +371,47 @@ class _LoginScreenState extends State<LoginScreen> {
         obscureText: isPassword && !_isPasswordVisible,
         keyboardType: keyboardType,
         style: GoogleFonts.inter(
-          color: colorScheme.onSurface,
-          fontSize: 15.sp,
+          color: textColor,
+          fontSize: 14.sp,
           fontWeight: FontWeight.w500,
         ),
-        cursorColor: colorScheme.primary,
+        cursorColor: AppTheme.secondary,
         onTap: () => setState(() {}),
         onEditingComplete: () => setState(() {}),
         decoration: InputDecoration(
-          // hintText never moves — fixes the "label goes inline" bug
-          hintText: label,
+          hintText: hint,
           hintStyle: GoogleFonts.inter(
-            color: colorScheme.onSurface.withOpacity(0.38),
+            color: AppTheme.textMuted,
             fontSize: 14.sp,
-            fontWeight: FontWeight.w400,
           ),
-          prefixIcon: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14.w),
-            child: Icon(
-              icon,
-              color: isFocused
-                  ? colorScheme.primary
-                  : colorScheme.onSurface.withOpacity(0.4),
-              size: 20.sp,
-            ),
+          prefixIcon: Icon(
+            icon,
+            color: isFocused ? AppTheme.secondary : AppTheme.textMuted,
+            size: 18.sp,
           ),
-          prefixIconConstraints: BoxConstraints(minWidth: 52.w, minHeight: 0),
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
-                    _isPasswordVisible
-                        ? Icons.visibility_rounded
-                        : Icons.visibility_off_rounded,
-                    color: colorScheme.onSurface.withOpacity(0.4),
-                    size: 20.sp,
+                    _isPasswordVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                    color: AppTheme.textMuted,
+                    size: 18.sp,
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _isPasswordVisible = !_isPasswordVisible;
-                    });
-                  },
+                  onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                 )
               : null,
           filled: true,
           fillColor: Colors.transparent,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16.r),
+            borderRadius: BorderRadius.circular(12.r),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16.r),
+            borderRadius: BorderRadius.circular(12.r),
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16.r),
+            borderRadius: BorderRadius.circular(12.r),
             borderSide: BorderSide.none,
           ),
         ),
@@ -583,4 +419,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

@@ -1,13 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/animations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+// ─── Design Tokens ────────────────────────────────────────────────────────────
+class AppTheme {
+  // Primary palette
+  static const Color primary = Color(0xFF0F172A);      // Dark Navy
+  static const Color secondary = Color(0xFF3B82F6);    // Blue
+  static const Color tertiary = Color(0xFF231500);     // Dark Brown
+  static const Color neutral = Color(0xFFF8FAFC);      // Near-White BG
+
+  // Secondary blue shades
+  static const Color blueLight = Color(0xFFEFF6FF);
+  static const Color blueMid = Color(0xFFBFDBFE);
+  static const Color blueDark = Color(0xFF1D4ED8);
+
+  // Surface / card
+  static const Color surfaceLight = Colors.white;
+  static const Color surfaceDark = Color(0xFF1E293B);
+
+  // Text
+  static const Color textPrimary = Color(0xFF0F172A);
+  static const Color textSecondary = Color(0xFF475569);
+  static const Color textMuted = Color(0xFF94A3B8);
+
+  // Status
+  static const Color success = Color(0xFF10B981);
+  static const Color error = Color(0xFFEF4444);
+  static const Color warning = Color(0xFFF59E0B);
+
+  // Border
+  static const Color borderLight = Color(0xFFE2E8F0);
+  static const Color borderDark = Color(0xFF334155);
+}
 
 class ThemeProvider with ChangeNotifier {
-  bool _isDarkMode = true;
+  bool _isDarkMode = false;
   bool _isLoaded = false;
-  
+
   bool get isDarkMode => _isDarkMode;
   bool get isLoaded => _isLoaded;
 
@@ -17,7 +47,7 @@ class ThemeProvider with ChangeNotifier {
 
   Future<void> _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    _isDarkMode = prefs.getBool('isDarkMode') ?? true;
+    _isDarkMode = prefs.getBool('isDarkMode') ?? false;
     _isLoaded = true;
     notifyListeners();
   }
@@ -31,28 +61,33 @@ class ThemeProvider with ChangeNotifier {
 
   ThemeMode get themeMode => _isDarkMode ? ThemeMode.dark : ThemeMode.light;
 
-  ThemeData get darkTheme {
+  ThemeData get lightTheme {
     return ThemeData(
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF0F172A),
-      primaryColor: const Color(0xFF818CF8),
-      cardColor: const Color(0xFF1E293B),
-      colorScheme: const ColorScheme.dark(
-        primary: Color(0xFF818CF8),
-        secondary: Color(0xFFFB7185),
-        tertiary: Color(0xFF2DD4BF),
-        background: Color(0xFF0F172A),
-        surface: Color(0xFF1E293B),
+      brightness: Brightness.light,
+      scaffoldBackgroundColor: AppTheme.neutral,
+      primaryColor: AppTheme.secondary,
+      cardColor: AppTheme.surfaceLight,
+      colorScheme: const ColorScheme.light(
+        primary: AppTheme.secondary,
+        secondary: AppTheme.secondary,
+        tertiary: AppTheme.tertiary,
+        background: AppTheme.neutral,
+        surface: AppTheme.surfaceLight,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
-        onTertiary: Colors.black,
+        onSurface: AppTheme.textPrimary,
+        onBackground: AppTheme.textPrimary,
+        outline: AppTheme.borderLight,
+        error: AppTheme.error,
       ),
-      appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF0F172A), foregroundColor: Colors.white, elevation: 0),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: Color(0xFF1E293B),
-        selectedItemColor: Color(0xFF818CF8),
-        unselectedItemColor: Colors.white38,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
       ),
+      dividerColor: AppTheme.borderLight,
       useMaterial3: true,
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
@@ -63,28 +98,33 @@ class ThemeProvider with ChangeNotifier {
     );
   }
 
-  ThemeData get lightTheme {
+  ThemeData get darkTheme {
     return ThemeData(
-      brightness: Brightness.light,
-      scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-      primaryColor: const Color(0xFF6366F1),
-      cardColor: Colors.white,
-      colorScheme: const ColorScheme.light(
-        primary: Color(0xFF6366F1),
-        secondary: Color(0xFFF43F5E),
-        tertiary: Color(0xFF14B8A6),
-        background: Color(0xFFF8FAFC),
-        surface: Colors.white,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: AppTheme.primary,
+      primaryColor: AppTheme.secondary,
+      cardColor: AppTheme.surfaceDark,
+      colorScheme: const ColorScheme.dark(
+        primary: AppTheme.secondary,
+        secondary: AppTheme.secondary,
+        tertiary: Color(0xFF60A5FA),
+        background: AppTheme.primary,
+        surface: AppTheme.surfaceDark,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
-        onTertiary: Colors.white,
+        onSurface: Colors.white,
+        onBackground: Colors.white,
+        outline: AppTheme.borderDark,
+        error: AppTheme.error,
       ),
-      appBarTheme: const AppBarTheme(backgroundColor: Color(0xFFF8FAFC), foregroundColor: Colors.black87, elevation: 0),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: Colors.white,
-        selectedItemColor: Color(0xFF6366F1),
-        unselectedItemColor: Colors.black45,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
       ),
+      dividerColor: AppTheme.borderDark,
       useMaterial3: true,
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {

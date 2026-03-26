@@ -10,6 +10,7 @@ import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import 'providers/user_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/theme_provider.dart';
 import 'utils/animations.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -17,49 +18,52 @@ class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key, this.isTab = false});
 
   Future<void> _logout(BuildContext context, bool isHindi) async {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardColor = isDark ? AppTheme.surfaceDark : Colors.white;
+    final textColor = isDark ? Colors.white : AppTheme.textPrimary;
+    final mutedColor = isDark ? Colors.white54 : AppTheme.textSecondary;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
+        backgroundColor: cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
         title: Text(tr('Confirm Logout', isHindi),
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: textColor)),
         content: Text(tr('Are you sure you want to log out?', isHindi),
-            style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65))),
+            style: GoogleFonts.inter(color: mutedColor)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(tr('Cancel', isHindi),
-                style: GoogleFonts.inter(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+                style: GoogleFonts.inter(color: AppTheme.secondary, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+              backgroundColor: AppTheme.error,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(tr('Log Out', isHindi),
                 style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-          )
+          ),
         ],
       ),
     );
 
     if (confirm != true) return;
-
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Row(
-        children: [
-          const Icon(Icons.check_circle_outlined, color: Colors.white, size: 16),
-          const SizedBox(width: 8),
-          Text(tr('Logged out successfully', isHindi), style: GoogleFonts.inter(color: Colors.white)),
-        ],
-      ),
-      backgroundColor: const Color(0xFF10B981),
+      content: Row(children: [
+        const Icon(Icons.check_circle_outlined, color: Colors.white, size: 16),
+        const SizedBox(width: 8),
+        Text(tr('Logged out successfully', isHindi), style: GoogleFonts.inter(color: Colors.white)),
+      ]),
+      backgroundColor: AppTheme.success,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       margin: EdgeInsets.all(16.w),
@@ -77,126 +81,108 @@ class ProfileScreen extends StatelessWidget {
     final userProvider = Provider.of<UserProvider>(context);
     final settings = Provider.of<SettingsProvider>(context);
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final textColor = colorScheme.onSurface;
-    final textDimColor = colorScheme.onSurface.withOpacity(0.52);
+
+    final bgColor = isDark ? AppTheme.primary : AppTheme.neutral;
+    final cardColor = isDark ? AppTheme.surfaceDark : Colors.white;
+    final textColor = isDark ? Colors.white : AppTheme.textPrimary;
+    final mutedColor = isDark ? Colors.white54 : AppTheme.textSecondary;
+    final borderColor = isDark ? AppTheme.borderDark : AppTheme.borderLight;
 
     final String displayName = settings.privacyMode ? 'R**' : userProvider.name;
     final String displayEmail = settings.privacyMode ? 'r**@example.com' : userProvider.email;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: bgColor,
       appBar: isTab
           ? null
           : AppBar(
-              backgroundColor: theme.scaffoldBackgroundColor,
-              title: Text(tr('Profile', settings.isHindi),
-                  style: GoogleFonts.inter(color: textColor, fontWeight: FontWeight.w700)),
+              backgroundColor: isDark ? AppTheme.primary : Colors.white,
               elevation: 0,
-              iconTheme: IconThemeData(color: textColor),
+              surfaceTintColor: Colors.transparent,
+              title: Text(tr('Profile', settings.isHindi),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 18.sp, color: textColor)),
+              bottom: PreferredSize(
+                preferredSize: Size.fromHeight(1.h),
+                child: Divider(height: 1, color: borderColor),
+              ),
             ),
       body: SafeArea(
         child: userProvider.isLoading
-            ? Center(child: CircularProgressIndicator(color: theme.primaryColor))
+            ? Center(child: CircularProgressIndicator(color: AppTheme.secondary))
             : Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 800),
+                  constraints: const BoxConstraints(maxWidth: 480),
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
                     child: Column(
                       children: [
-                        // Avatar Section
+                        // ── Avatar Section ─────────────────────────────────
                         StaggeredListItem(
                           index: 0,
                           child: Center(
                             child: Column(
                               children: [
-                                // Gradient ring avatar
+                                // Avatar with blue ring
                                 Container(
-                                  padding: EdgeInsets.all(4.w),
+                                  padding: EdgeInsets.all(3.w),
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        colorScheme.primary,
-                                        colorScheme.secondary,
-                                        isDark ? const Color(0xFF06B6D4) : const Color(0xFF8B5CF6),
-                                      ],
-                                    ),
+                                    border: Border.all(color: AppTheme.secondary, width: 2.5),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: colorScheme.primary.withOpacity(0.35),
-                                        blurRadius: 20.r,
-                                        spreadRadius: 2.r,
+                                        color: AppTheme.secondary.withOpacity(0.20),
+                                        blurRadius: 14.r,
                                       ),
                                     ],
                                   ),
-                                  child: Container(
-                                    padding: EdgeInsets.all(3.w),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: theme.scaffoldBackgroundColor,
-                                    ),
-                                    child: CircleAvatar(
-                                      radius: 48.r,
-                                      backgroundColor: isDark
-                                          ? colorScheme.primary.withOpacity(0.1)
-                                          : colorScheme.primary.withOpacity(0.08),
-                                      child: Text(
-                                        displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 36.sp,
-                                          fontWeight: FontWeight.w800,
-                                          color: colorScheme.primary,
-                                        ),
+                                  child: CircleAvatar(
+                                    radius: 44.r,
+                                    backgroundColor: AppTheme.blueLight,
+                                    child: Text(
+                                      displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 32.sp,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.secondary,
                                       ),
                                     ),
                                   ),
                                 ),
-                                SizedBox(height: 16.h),
+                                SizedBox(height: 14.h),
                                 Text(
                                   displayName,
                                   style: GoogleFonts.inter(
-                                    fontSize: 24.sp,
+                                    fontSize: 22.sp,
                                     fontWeight: FontWeight.w800,
                                     color: textColor,
-                                    letterSpacing: -0.5,
+                                    letterSpacing: -0.4,
                                   ),
                                 ),
                                 SizedBox(height: 4.h),
-                                Text(
-                                  displayEmail,
-                                  style: GoogleFonts.inter(fontSize: 14.sp, color: textDimColor),
-                                ),
+                                Text(displayEmail,
+                                    style: GoogleFonts.inter(fontSize: 13.sp, color: mutedColor)),
                                 SizedBox(height: 12.h),
-                                // Badge
+                                // Verified badge
                                 Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
                                   decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        colorScheme.primary.withOpacity(0.15),
-                                        colorScheme.secondary.withOpacity(0.15),
-                                      ],
-                                    ),
+                                    color: AppTheme.blueLight,
                                     borderRadius: BorderRadius.circular(20.r),
-                                    border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
+                                    border: Border.all(color: AppTheme.blueMid),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.verified_rounded, color: colorScheme.primary, size: 14.sp),
-                                      SizedBox(width: 6.w),
+                                      Icon(Icons.verified_rounded, color: AppTheme.secondary, size: 13.sp),
+                                      SizedBox(width: 5.w),
                                       Text(
                                         'Verified User',
                                         style: GoogleFonts.inter(
-                                          fontSize: 12.sp,
+                                          fontSize: 11.sp,
                                           fontWeight: FontWeight.w600,
-                                          color: colorScheme.primary,
+                                          color: AppTheme.secondary,
                                         ),
                                       ),
                                     ],
@@ -206,52 +192,62 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        SizedBox(height: 32.h),
 
-                        // Quick Stats
+                        SizedBox(height: 28.h),
+
+                        // ── Stats Card ─────────────────────────────────────
                         StaggeredListItem(
                           index: 1,
                           child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 16.w),
                             decoration: BoxDecoration(
-                              color: theme.cardColor,
+                              color: cardColor,
                               borderRadius: BorderRadius.circular(20.r),
-                              border: Border.all(color: colorScheme.onSurface.withOpacity(0.06)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-                                  blurRadius: 12.r,
-                                  offset: Offset(0, 4.h),
-                                ),
-                              ],
+                              border: Border.all(color: borderColor),
+                              boxShadow: isDark
+                                  ? []
+                                  : [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 12.r,
+                                        offset: Offset(0, 4.h),
+                                      ),
+                                    ],
                             ),
                             child: Row(
                               children: [
-                                _buildMiniStat('42', 'Total Scans', Icons.document_scanner_rounded, colorScheme),
-                                _buildDivider(isDark),
-                                _buildMiniStat('38', 'Verified', Icons.verified_rounded, colorScheme),
-                                _buildDivider(isDark),
-                                _buildMiniStat('4', 'Flagged', Icons.flag_rounded, colorScheme, isAlert: true),
+                                _buildStat('42', 'Total Scans', Icons.document_scanner_rounded,
+                                    AppTheme.secondary, textColor, mutedColor),
+                                Container(width: 1, height: 48.h, color: borderColor),
+                                _buildStat('38', 'Verified', Icons.verified_rounded,
+                                    AppTheme.success, textColor, mutedColor),
+                                Container(width: 1, height: 48.h, color: borderColor),
+                                _buildStat('4', 'Flagged', Icons.flag_rounded,
+                                    AppTheme.error, textColor, mutedColor),
                               ],
                             ),
                           ),
                         ),
-                        SizedBox(height: 24.h),
 
-                        // Section Header
+                        SizedBox(height: 28.h),
+
+                        // ── Account Section ────────────────────────────────
+                        _sectionHeader('ACCOUNT', AppTheme.secondary),
+                        SizedBox(height: 10.h),
+
                         StaggeredListItem(
                           index: 2,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'Account',
-                              style: GoogleFonts.inter(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w600,
-                                color: textDimColor,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
+                          child: _buildActionTile(
+                            icon: Icons.edit_rounded,
+                            title: tr('Edit Profile', settings.isHindi),
+                            subtitle: tr('Update name, email and bio', settings.isHindi),
+                            iconColor: AppTheme.secondary,
+                            cardColor: cardColor,
+                            textColor: textColor,
+                            mutedColor: mutedColor,
+                            borderColor: borderColor,
+                            isDark: isDark,
+                            onTap: () => Navigator.push(
+                                context, MaterialPageRoute(builder: (_) => const EditProfileScreen())),
                           ),
                         ),
                         SizedBox(height: 10.h),
@@ -259,92 +255,72 @@ class ProfileScreen extends StatelessWidget {
                         StaggeredListItem(
                           index: 3,
                           child: _buildActionTile(
-                            context,
-                            icon: Icons.edit_rounded,
-                            title: tr('Edit Profile Information', settings.isHindi),
-                            iconColor: const Color(0xFF6366F1),
-                            theme: theme,
+                            icon: Icons.lock_rounded,
+                            title: tr('Change Password', settings.isHindi),
+                            subtitle: tr('Update your security credentials', settings.isHindi),
+                            iconColor: const Color(0xFF8B5CF6),
+                            cardColor: cardColor,
                             textColor: textColor,
-                            textDimColor: textDimColor,
+                            mutedColor: mutedColor,
+                            borderColor: borderColor,
                             isDark: isDark,
-                            onTap: () {
-                              Navigator.push(context,
-                                  MaterialPageRoute(builder: (_) => const EditProfileScreen()));
-                            },
+                            onTap: () => Navigator.push(
+                                context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
                           ),
                         ),
                         SizedBox(height: 10.h),
+
                         StaggeredListItem(
                           index: 4,
                           child: _buildActionTile(
-                            context,
-                            icon: Icons.lock_rounded,
-                            title: tr('Change Password', settings.isHindi),
-                            iconColor: const Color(0xFF8B5CF6),
-                            theme: theme,
-                            textColor: textColor,
-                            textDimColor: textDimColor,
-                            isDark: isDark,
-                            onTap: () {
-                              Navigator.push(context,
-                                  MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
-                            },
-                          ),
-                        ),
-                        SizedBox(height: 10.h),
-                        StaggeredListItem(
-                          index: 5,
-                          child: _buildActionTile(
-                            context,
                             icon: Icons.settings_rounded,
                             title: tr('Settings', settings.isHindi),
-                            iconColor: const Color(0xFF10B981),
-                            theme: theme,
+                            subtitle: tr('Theme, language and preferences', settings.isHindi),
+                            iconColor: AppTheme.success,
+                            cardColor: cardColor,
                             textColor: textColor,
-                            textDimColor: textDimColor,
+                            mutedColor: mutedColor,
+                            borderColor: borderColor,
                             isDark: isDark,
-                            onTap: () {
-                              Navigator.push(
-                                  context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
-                            },
+                            onTap: () => Navigator.push(
+                                context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
                           ),
                         ),
 
-                        SizedBox(height: 32.h),
+                        SizedBox(height: 28.h),
 
-                        // Logout Button
+                        // ── Logout Button ──────────────────────────────────
                         StaggeredListItem(
-                          index: 6,
+                          index: 5,
                           child: AnimatedScaleButton(
                             onTap: () => _logout(context, settings.isHindi),
                             child: Container(
                               width: double.infinity,
-                              padding: EdgeInsets.symmetric(vertical: 18.h),
+                              padding: EdgeInsets.symmetric(vertical: 16.h),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEF4444).withOpacity(isDark ? 0.1 : 0.06),
-                                borderRadius: BorderRadius.circular(18.r),
-                                border: Border.all(
-                                    color: const Color(0xFFEF4444).withOpacity(0.25), width: 1.w),
+                                color: AppTheme.error.withOpacity(isDark ? 0.10 : 0.06),
+                                borderRadius: BorderRadius.circular(16.r),
+                                border: Border.all(color: AppTheme.error.withOpacity(0.25)),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.logout_rounded,
-                                      color: const Color(0xFFEF4444), size: 20.sp),
+                                  Icon(Icons.logout_rounded, color: AppTheme.error, size: 18.sp),
                                   SizedBox(width: 10.w),
                                   Text(
                                     tr('Log Out', settings.isHindi),
                                     style: GoogleFonts.inter(
-                                        fontSize: 16.sp,
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFFEF4444)),
+                                      fontSize: 15.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.error,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                           ),
                         ),
-                        SizedBox(height: 100.h),
+                        SizedBox(height: 80.h),
                       ],
                     ),
                   ),
@@ -354,76 +330,107 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMiniStat(String value, String label, IconData icon, ColorScheme colorScheme, {bool isAlert = false}) {
-    final color = isAlert ? const Color(0xFFEF4444) : colorScheme.primary;
-    return Expanded(
-      child: Column(
+  Widget _sectionHeader(String label, Color color) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Row(
         children: [
-          Icon(icon, color: color, size: 20.sp),
-          SizedBox(height: 6.h),
-          Text(value,
-              style: GoogleFonts.inter(fontSize: 20.sp, fontWeight: FontWeight.w800, color: color)),
-          SizedBox(height: 2.h),
-          Text(label,
-              style: GoogleFonts.inter(fontSize: 11.sp, color: colorScheme.onSurface.withOpacity(0.5)),
-              textAlign: TextAlign.center),
+          Container(
+            width: 3.w,
+            height: 14.h,
+            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2.r)),
+          ),
+          SizedBox(width: 8.w),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w700,
+              color: color,
+              letterSpacing: 1.2,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDivider(bool isDark) {
-    return Container(
-      height: 40.h,
-      width: 1,
-      color: Colors.grey.withOpacity(isDark ? 0.15 : 0.2),
+  Widget _buildStat(
+      String value, String label, IconData icon, Color color, Color textColor, Color mutedColor) {
+    return Expanded(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 18.h),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 18.sp),
+            SizedBox(height: 6.h),
+            Text(value,
+                style: GoogleFonts.inter(fontSize: 20.sp, fontWeight: FontWeight.w800, color: textColor)),
+            SizedBox(height: 2.h),
+            Text(label,
+                style: GoogleFonts.inter(fontSize: 11.sp, color: mutedColor),
+                textAlign: TextAlign.center),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildActionTile(
-    BuildContext context, {
+  Widget _buildActionTile({
     required IconData icon,
     required String title,
+    required String subtitle,
     required VoidCallback onTap,
-    required ThemeData theme,
-    required Color textColor,
-    required Color textDimColor,
-    required bool isDark,
     required Color iconColor,
+    required Color cardColor,
+    required Color textColor,
+    required Color mutedColor,
+    required Color borderColor,
+    required bool isDark,
   }) {
     return AnimatedScaleButton(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 16.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(18.r),
-          border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.06)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.15 : 0.03),
-              blurRadius: 10.r,
-              offset: Offset(0, 3.h),
-            ),
-          ],
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: borderColor),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8.r,
+                    offset: Offset(0, 2.h),
+                  ),
+                ],
         ),
         child: Row(
           children: [
             Container(
               padding: EdgeInsets.all(10.w),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.12),
+                color: iconColor.withOpacity(0.10),
                 borderRadius: BorderRadius.circular(12.r),
               ),
-              child: Icon(icon, color: iconColor, size: 20.sp),
+              child: Icon(icon, color: iconColor, size: 18.sp),
             ),
-            SizedBox(width: 16.w),
+            SizedBox(width: 14.w),
             Expanded(
-              child: Text(title,
-                  style: GoogleFonts.inter(
-                      fontSize: 15.sp, fontWeight: FontWeight.w600, color: textColor)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: GoogleFonts.inter(
+                          fontSize: 14.sp, fontWeight: FontWeight.w700, color: textColor)),
+                  SizedBox(height: 2.h),
+                  Text(subtitle,
+                      style: GoogleFonts.inter(fontSize: 12.sp, color: mutedColor)),
+                ],
+              ),
             ),
-            Icon(Icons.chevron_right_rounded, color: textDimColor, size: 20.sp),
+            Icon(Icons.chevron_right_rounded, color: mutedColor, size: 20.sp),
           ],
         ),
       ),
