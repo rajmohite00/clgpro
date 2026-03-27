@@ -10,6 +10,7 @@ import 'utils/animations.dart';
 import 'package:provider/provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/user_provider.dart';
+import 'widgets/chatbot_widget.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -64,6 +65,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     return Scaffold(
       extendBody: true,
       backgroundColor: theme.scaffoldBackgroundColor,
+      floatingActionButton: const ChatbotFAB(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 280),
         transitionBuilder: (child, animation) => FadeTransition(
