@@ -6,11 +6,15 @@ class UserProvider with ChangeNotifier {
   String _email = 'raj@example.com';
   String? _profilePicPath;
   bool _isLoading = false;
+  int _totalScans = 0;
+  int _verifiedCount = 0;
 
   String get name => _name;
   String get email => _email;
   String? get profilePicPath => _profilePicPath;
   bool get isLoading => _isLoading;
+  int get totalScans => _totalScans;
+  int get verifiedCount => _verifiedCount;
 
   Future<void> fetchProfile() async {
     _isLoading = true;
@@ -19,8 +23,19 @@ class UserProvider with ChangeNotifier {
     await Future.delayed(const Duration(seconds: 1));
     final prefs = await SharedPreferences.getInstance();
     _profilePicPath = prefs.getString('profile_pic_path');
+    _totalScans = prefs.getInt('total_scans') ?? 0;
+    _verifiedCount = prefs.getInt('verified_count') ?? 0;
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> incrementScanCount({required bool isVerified}) async {
+    _totalScans++;
+    if (isVerified) _verifiedCount++;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('total_scans', _totalScans);
+    await prefs.setInt('verified_count', _verifiedCount);
   }
 
   Future<bool> updateProfile(String newName, String newEmail) async {

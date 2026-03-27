@@ -149,6 +149,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 class _HomeView extends StatelessWidget {
   const _HomeView();
 
+  String _getGreeting(bool isHindi) {
+    return isHindi ? 'नमस्ते' : 'Hello';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -185,9 +189,9 @@ class _HomeView extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${_getGreeting()}, $userName 👋',
+                                '${_getGreeting(isHindi)}, $userName 👋',
                                 style: GoogleFonts.inter(
-                                  fontSize: 26.sp,
+                                  fontSize: 22.sp,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -0.6,
                                   color: textColor,
@@ -196,7 +200,7 @@ class _HomeView extends StatelessWidget {
                               ),
                               SizedBox(height: 4.h),
                               Text(
-                                'Ready to scan a document?',
+                                tr('Ready to scan a document?', isHindi),
                                 style: GoogleFonts.inter(
                                   fontSize: 13.sp,
                                   color: textDimColor,
@@ -392,14 +396,29 @@ class _HomeView extends StatelessWidget {
                     index: 2,
                     child: Row(
                       children: [
-                        _buildStatCard(tr('Last Scan', isHindi), tr('Today', isHindi), Icons.schedule_rounded,
-                            const Color(0xFF6366F1), cardColor, textColor, textDimColor, isDark),
+                        _buildStatCard(
+                          tr('Last Scan', isHindi),
+                          tr('Today', isHindi),
+                          Icons.schedule_rounded,
+                          const Color(0xFF6366F1),
+                          cardColor, textColor, textDimColor, isDark,
+                        ),
                         SizedBox(width: 12.w),
-                        _buildStatCard(tr('Total', isHindi), '42', Icons.bar_chart_rounded,
-                            const Color(0xFF10B981), cardColor, textColor, textDimColor, isDark),
+                        _buildStatCard(
+                          tr('Scanned', isHindi),
+                          userProvider.totalScans.toString(),
+                          Icons.bar_chart_rounded,
+                          const Color(0xFF10B981),
+                          cardColor, textColor, textDimColor, isDark,
+                        ),
                         SizedBox(width: 12.w),
-                        _buildStatCard(tr('Matches', isHindi), '94%', Icons.verified_rounded,
-                            const Color(0xFFF59E0B), cardColor, textColor, textDimColor, isDark),
+                        _buildStatCard(
+                          tr('Verified', isHindi),
+                          userProvider.verifiedCount.toString(),
+                          Icons.verified_rounded,
+                          const Color(0xFFF59E0B),
+                          cardColor, textColor, textDimColor, isDark,
+                        ),
                       ],
                     ),
                   ),
@@ -421,9 +440,13 @@ class _HomeView extends StatelessWidget {
                           ),
                         ),
                         TextButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            // Navigate to History tab (index 1)
+                            final scaffold = context.findAncestorStateOfType<_DashboardScreenState>();
+                            scaffold?._onTabTapped(1);
+                          },
                           child: Text(
-                            'See all',
+                            tr('See all', isHindi),
                             style: GoogleFonts.inter(
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w600,
@@ -451,7 +474,7 @@ class _HomeView extends StatelessWidget {
                     child: _buildRecentActivityItem('Driver License', '10 Mar 2026', true,
                         cardColor, textColor, textDimColor, isDark, colorScheme),
                   ),
-                  SizedBox(height: 100.h), // Space for bottom nav
+                  SizedBox(height: 90.h), // Space for bottom nav + FAB
                 ],
               ),
             ),
@@ -459,10 +482,6 @@ class _HomeView extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _getGreeting() {
-    return 'Hello';
   }
 
   Widget _buildStatCard(String title, String value, IconData icon, Color accentColor,

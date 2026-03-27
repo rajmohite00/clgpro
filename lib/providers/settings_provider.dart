@@ -206,6 +206,7 @@ String tr(String text, bool isHindi) {
     'Good Afternoon': 'नमस्ते',
     'Good Evening': 'शुभ संध्या',
     'Ready to scan a document?': 'क्या आप एक डॉक्यूमेंट स्कैन करने के लिए तैयार हैं?',
+    'Scanned': 'स्कैन किए',
   };
 
   return map[text] ?? text;
