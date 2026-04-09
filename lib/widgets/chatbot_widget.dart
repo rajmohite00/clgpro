@@ -1,8 +1,12 @@
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 import '../providers/settings_provider.dart';
 
@@ -12,120 +16,8 @@ import '../providers/settings_provider.dart';
 class _ChatMessage {
   final String text;
   final bool isUser;
-  _ChatMessage({required this.text, required this.isUser});
-}
-
-// ═══════════════════════════════════════════════════════════
-// BOT BRAIN  –  keyword matching, bilingual
-// ═══════════════════════════════════════════════════════════
-class _BotBrain {
-  // Each rule: keywords (English+Hindi mixed) → {en, hi} response
-  static const List<_BotRule> _rules = [
-    // ── Greeting ──────────────────────────────────────────
-    _BotRule(
-      keywords: ['hello', 'hi', 'hey', 'hii', 'helo', 'namaste', 'helo'],
-      en: "Hey there! 👋 I'm your assistant. Ask me about uploading docs, fraud score, checking results, or downloading reports!",
-      hi: "Namaste! 👋 Main aapka assistant hoon. Upload, fraud score, result ya report ke baare me pucho!",
-    ),
-
-    // ── How to use the app ─────────────────────────────────
-    _BotRule(
-      keywords: ['use', 'how to use', 'kaise use', 'app use', 'kaise kare', 'use karna', 'start', 'shuru'],
-      en: "Using the app is simple:\n\n1️⃣ Go to Dashboard\n2️⃣ Tap 'Upload Documents'\n3️⃣ Select your files\n4️⃣ View results 📋",
-      hi: "App use karna easy hai:\n\n1️⃣ Dashboard par jao\n2️⃣ 'Upload Documents' par tap karo\n3️⃣ File select karo\n4️⃣ Result dekho 📋",
-    ),
-
-    // ── Upload single document ─────────────────────────────
-    _BotRule(
-      keywords: ['upload', 'how to upload', 'upload kaise', 'document upload', 'file upload', 'scan', 'document', 'file'],
-      en: "To upload documents:\n\n👉 Go to Dashboard → tap 'Upload Documents'\n👉 Select files from gallery or camera\n👉 AI will analyse them instantly! 📄",
-      hi: "Document upload karne ke liye:\n\n👉 Dashboard pe jao → 'Upload Documents' pe tap karo\n👉 Gallery ya camera se file chuno\n👉 AI turant check karegi! 📄",
-    ),
-
-    // ── Multiple documents ─────────────────────────────────
-    _BotRule(
-      keywords: ['multiple', 'more documents', 'ek se jyada', 'kai document', 'many files', 'multiple files', 'alag alag'],
-      en: "Yes! You can upload multiple documents at once 📂\n\nJust tap 'Upload Documents' and select multiple files from your gallery. The AI compares them all together.",
-      hi: "Haan! Aap ek saath kai documents upload kar sakte ho 📂\n\n'Upload Documents' pe tap karo aur gallery se kai files chuno. AI sabko ek saath compare karegi.",
-    ),
-
-    // ── App features ───────────────────────────────────────
-    _BotRule(
-      keywords: ['features', 'kya karta hai', 'what does', 'app kya', 'capabilities', 'kya kar sakta', 'app me kya'],
-      en: "Here's what this app can do 🚀\n\n✅ Upload & scan documents\n🔍 AI-powered fraud detection\n📊 Fraud score (0–100%)\n📋 Full comparison report\n📥 Download PDF report",
-      hi: "App ye sab kar sakta hai 🚀\n\n✅ Documents upload aur scan karna\n🔍 AI se fraud pakadna\n📊 Fraud score (0–100%)\n📋 Puri comparison report\n📥 PDF report download karna",
-    ),
-
-    // ── Fraud score ────────────────────────────────────────
-    _BotRule(
-      keywords: ['fraud', 'fraud score', 'score', 'risk', 'percentage', 'dhokha', 'nakli', 'genuine'],
-      en: "The **Fraud Score** is an AI rating from 0–100% 🔢\n\n• Higher score = more genuine ✅\n• Lower score = possible fraud ⚠️\n\nIt checks document authenticity & cross-matches fields.",
-      hi: "**Fraud Score** ek AI rating hai 0–100% ke beech 🔢\n\n• Zyada score = document sahi hai ✅\n• Kam score = fraud ho sakta hai ⚠️\n\nYe document ki sachhai aur details check karta hai.",
-    ),
-
-    // ── View results ───────────────────────────────────────
-    _BotRule(
-      keywords: ['result', 'output', 'check result', 'view result', 'results', 'dekho', 'kahan hai', 'analysis', 'report dekho'],
-      en: "To view your results 📋\n\n👉 Tap **History** at the bottom navigation\n👉 Each entry shows document name, date & verification status",
-      hi: "Result dekhne ke liye 📋\n\n👉 Neeche **History** pe tap karo\n👉 Har entry me document ka naam, date aur status dikhega",
-    ),
-
-    // ── Download report ────────────────────────────────────
-    _BotRule(
-      keywords: ['download', 'report', 'export', 'save', 'pdf', 'download kaise', 'report download'],
-      en: "To download a report 📥\n\n👉 Open any result from **History**\n👉 Tap the **Download** icon at top-right\n👉 Report saves as PDF",
-      hi: "Report download karne ke liye 📥\n\n👉 **History** se koi bhi result kholo\n👉 Upar-daaye **Download** icon pe tap karo\n👉 PDF aa jayegi",
-    ),
-
-    // ── Help / what can you do ─────────────────────────────
-    _BotRule(
-      keywords: ['help', 'guide', 'assist', 'what can you', 'kya puch', 'kya puchu', 'madad'],
-      en: "I can help you with 😊\n\n📤 How to upload documents\n📂 Uploading multiple docs\n🔢 What is fraud score\n📋 How to check results\n📥 How to download report\n\nJust ask!",
-      hi: "Main in cheezon me madad kar sakta hoon 😊\n\n📤 Document kaise upload karein\n📂 Kai documents ek saath upload karna\n🔢 Fraud score kya hai\n📋 Result kaise dekhein\n📥 Report kaise download karein\n\nBas pucho!",
-    ),
-
-    // ── Thanks ─────────────────────────────────────────────
-    _BotRule(
-      keywords: ['thank', 'thanks', 'ty', 'great', 'awesome', 'perfect', 'shukriya', 'dhanyawad', 'acha', 'theek hai'],
-      en: "You're welcome! 😊 Feel free to ask anytime.",
-      hi: "Koi baat nahi! 😊 Kabhi bhi pucho.",
-    ),
-  ];
-
-  // Fallback messages
-  static const String _fallbackEn =
-      "I didn't understand 😅 Try asking about upload, results, or features.";
-  static const String _fallbackHi =
-      "Mujhe samajh nahi aaya 😅 Upload ya result ke baare me pucho.";
-
-  /// Normalize: lowercase + trim
-  static String _normalize(String input) => input.toLowerCase().trim();
-
-  /// Main respond method.  isHindi drives which language to return.
-  static String respond(String input, {required bool isHindi}) {
-    final normalized = _normalize(input);
-    for (final rule in _rules) {
-      for (final kw in rule.keywords) {
-        if (normalized.contains(kw)) {
-          return isHindi ? rule.hi : rule.en;
-        }
-      }
-    }
-    return isHindi ? _fallbackHi : _fallbackEn;
-  }
-
-  /// Greeting message for the initial bot bubble
-  static String greeting({required bool isHindi}) => isHindi
-      ? "Namaste! 😊 Main aapki madad ke liye hoon. App use karne ke baare me pucho."
-      : "Hi! I'm here to help 😊 Ask me how to use the app.";
-}
-
-// Simple immutable rule holder
-class _BotRule {
-  final List<String> keywords;
-  final String en;
-  final String hi;
-  const _BotRule({required this.keywords, required this.en, required this.hi});
+  final bool isPdfResult;
+  _ChatMessage({required this.text, required this.isUser, this.isPdfResult = false});
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -138,8 +30,7 @@ class ChatbotFAB extends StatefulWidget {
   State<ChatbotFAB> createState() => _ChatbotFABState();
 }
 
-class _ChatbotFABState extends State<ChatbotFAB>
-    with SingleTickerProviderStateMixin {
+class _ChatbotFABState extends State<ChatbotFAB> with SingleTickerProviderStateMixin {
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
 
@@ -162,8 +53,7 @@ class _ChatbotFABState extends State<ChatbotFAB>
   }
 
   void _openChat(BuildContext context) {
-    final isHindi =
-        Provider.of<SettingsProvider>(context, listen: false).isHindi;
+    final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -225,8 +115,7 @@ class _ChatScreen extends StatefulWidget {
   State<_ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<_ChatScreen>
-    with SingleTickerProviderStateMixin {
+class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderStateMixin {
   final TextEditingController _inputCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final List<_ChatMessage> _messages = [];
@@ -237,6 +126,11 @@ class _ChatScreenState extends State<_ChatScreen>
   bool _isTyping = false;
   bool _greetingSent = false;
 
+  // Gemini Setup
+  static const String _apiKey = "AIzaSyDByuv-Y2vznv4JVg9IAcnpwU4sGXCfsT8";
+  late GenerativeModel _model;
+  late ChatSession _chatSession;
+
   @override
   void initState() {
     super.initState();
@@ -244,18 +138,41 @@ class _ChatScreenState extends State<_ChatScreen>
       vsync: this,
       duration: const Duration(milliseconds: 360),
     );
-    _sheetAnim =
-        CurvedAnimation(parent: _sheetCtrl, curve: Curves.easeOutCubic);
+    _sheetAnim = CurvedAnimation(parent: _sheetCtrl, curve: Curves.easeOutCubic);
     _sheetCtrl.forward();
 
-    // Initial greeting after slight delay
+    _initGemini();
+
     Future.delayed(const Duration(milliseconds: 380), () {
       if (!mounted || _greetingSent) return;
       _greetingSent = true;
-      final isHindi =
-          Provider.of<SettingsProvider>(context, listen: false).isHindi;
-      _addBotMessage(_BotBrain.greeting(isHindi: isHindi));
+      final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
+      _addBotMessage(
+        isHindi 
+          ? "Namaste! 😊 Main aapki madad ke liye hoon. Aap PDF ya image upload kar sakte hain summary ke liye (📎 tap karein), ya mujhse kuch bhi puch sakte hain." 
+          : "Hi! I'm your AI assistant 😊 I can answer questions, or you can click the 📎 icon to upload a PDF or Image and I will summarize it for you in real-time."
+      );
     });
+  }
+
+  void _initGemini() {
+    final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
+    final langInstruction = isHindi 
+      ? 'Always reply in Hindi using English characters (Hinglish) or Devanagari based on what user uses. ' 
+      : 'Always reply in English. ';
+      
+    _model = GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: _apiKey,
+      safetySettings: [
+        SafetySetting(HarmCategory.harassment, HarmBlockThreshold.none),
+        SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.none),
+        SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.none),
+        SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.none),
+      ],
+      systemInstruction: Content.system("You are the AI assistant for 'Satya Agent' (Smart Document Detective API app). Your job is to help users upload documents, understand the AI Fraud Score (0-100%), view results in history, or summarize uploaded PDFs. Explain things concisely and be friendly. Use bolding and emojis to make things readable. $langInstruction"),
+    );
+    _chatSession = _model.startChat();
   }
 
   @override
@@ -266,35 +183,120 @@ class _ChatScreenState extends State<_ChatScreen>
     super.dispose();
   }
 
-  // ── Message helpers ──────────────────────────────────────
-  void _addBotMessage(String text) {
+  void _addBotMessage(String text, {bool isPdfResult = false}) {
     if (!mounted) return;
-    setState(() => _messages.add(_ChatMessage(text: text, isUser: false)));
+    setState(() => _messages.add(_ChatMessage(text: text, isUser: false, isPdfResult: isPdfResult)));
     _scrollToBottom();
   }
 
-  void _sendMessage({String? override}) {
+  Future<void> _sendMessage({String? override}) async {
     final raw = override ?? _inputCtrl.text;
     final text = raw.trim();
     if (text.isEmpty) return;
-
-    final isHindi =
-        Provider.of<SettingsProvider>(context, listen: false).isHindi;
 
     setState(() {
       _messages.add(_ChatMessage(text: text, isUser: true));
       _isTyping = true;
     });
-    _inputCtrl.clear();
     _scrollToBottom();
+    _inputCtrl.clear();
 
-    final delay = 550 + Random().nextInt(400);
-    Future.delayed(Duration(milliseconds: delay), () {
-      if (!mounted) return;
-      final response = _BotBrain.respond(text, isHindi: isHindi);
+    GenerateContentResponse? response;
+    int retries = 3;
+    while (retries > 0) {
+      try {
+        response = await _chatSession.sendMessage(Content.text(text));
+        break;
+      } catch (err) {
+        if (err.toString().contains('503')) {
+          retries--;
+          if (retries == 0) {
+            setState(() => _isTyping = false);
+            _addBotMessage("Google servers are too busy right now (Error 503). Please try again shortly.");
+            return;
+          }
+          await Future.delayed(const Duration(seconds: 3));
+        } else {
+          setState(() => _isTyping = false);
+          _addBotMessage("Error: $err");
+          return;
+        }
+      }
+    }
+
+    setState(() => _isTyping = false);
+    _addBotMessage(response?.text ?? "I couldn't process that.");
+  }
+
+  bool _isPickerActive = false;
+
+  Future<void> _pickAndProcessFile() async {
+    if (_isPickerActive) return;
+    _isPickerActive = true;
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final filePath = result.files.single.path!;
+        final fileName = result.files.single.name;
+        final ext = result.files.single.extension?.toLowerCase() ?? '';
+
+        setState(() {
+          _messages.add(_ChatMessage(text: "📎 Uploaded file: $fileName", isUser: true));
+          _isTyping = true;
+        });
+        _scrollToBottom();
+
+        final File file = File(filePath);
+        final bytes = await file.readAsBytes();
+        final promptText = "I have uploaded a document named '$fileName'. Please provide a clear summary of this document, state the main points, and suggest any actions or solutions I should take based on it.";
+
+        String mimeType;
+        if (ext == 'pdf') {
+          mimeType = 'application/pdf';
+        } else if (ext == 'png') {
+          mimeType = 'image/png';
+        } else if (ext == 'webp') {
+          mimeType = 'image/webp';
+        } else {
+          mimeType = 'image/jpeg';
+        }
+
+        // RESET CHAT SESSION SO IT DOESNT OVERLOAD NETWORK WITH OLD IMAGES
+        _chatSession = _model.startChat();
+        
+        final documentPart = DataPart(mimeType, bytes);
+        
+        GenerateContentResponse? response;
+        int retries = 3;
+        while (retries > 0) {
+          try {
+            response = await _chatSession.sendMessage(Content.multi([TextPart(promptText), documentPart]));
+            break;
+          } catch(err) {
+            if (err.toString().contains('503')) {
+              retries--;
+              if (retries == 0) rethrow;
+              await Future.delayed(const Duration(seconds: 3));
+            } else {
+              rethrow;
+            }
+          }
+        }
+        
+        setState(() => _isTyping = false);
+        final iconEmoji = ext == 'pdf' ? '📄' : '🖼️';
+        _addBotMessage("$iconEmoji **Analysis Complete**\n\n${response?.text ?? 'No response'}", isPdfResult: true);
+      }
+    } catch (e) {
       setState(() => _isTyping = false);
-      _addBotMessage(response);
-    });
+      _addBotMessage("Sorry, I encountered an error processing the file: $e");
+    } finally {
+      _isPickerActive = false;
+    }
   }
 
   void _scrollToBottom() {
@@ -309,9 +311,6 @@ class _ChatScreenState extends State<_ChatScreen>
     });
   }
 
-  // ─────────────────────────────────────────────────────────
-  // BUILD
-  // ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
@@ -321,15 +320,12 @@ class _ChatScreenState extends State<_ChatScreen>
     final screenHeight = MediaQuery.of(context).size.height;
 
     final hintText = isHindi ? 'Kuch puchho...' : 'Ask something...';
-    final headerSubtitle =
-        isHindi ? 'Online · hamesha yahan hoon' : 'Online · always here for you';
+    final headerSubtitle = isHindi ? 'Online · intelligent PDF assistant' : 'Online · intelligent PDF assistant';
 
     return AnimatedBuilder(
       animation: _sheetAnim,
       builder: (_, child) => SlideTransition(
-        position:
-            Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-                .animate(_sheetAnim),
+        position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(_sheetAnim),
         child: child,
       ),
       child: Container(
@@ -358,29 +354,23 @@ class _ChatScreenState extends State<_ChatScreen>
     );
   }
 
-  // ── Handle bar ───────────────────────────────────────────
   Widget _buildHandle(bool isDark) {
     return Container(
       margin: EdgeInsets.only(top: 12.h, bottom: 4.h),
       width: 40.w,
       height: 4.h,
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withOpacity(0.14)
-            : Colors.black.withOpacity(0.11),
+        color: isDark ? Colors.white.withOpacity(0.14) : Colors.black.withOpacity(0.11),
         borderRadius: BorderRadius.circular(99),
       ),
     );
   }
 
-  // ── Header ───────────────────────────────────────────────
-  Widget _buildHeader(
-      bool isDark, ThemeData theme, bool isHindi, String subtitle) {
+  Widget _buildHeader(bool isDark, ThemeData theme, bool isHindi, String subtitle) {
     return Padding(
       padding: EdgeInsets.fromLTRB(20.w, 12.h, 8.w, 12.h),
       child: Row(
         children: [
-          // Bot avatar
           Container(
             width: 44.w,
             height: 44.w,
@@ -390,8 +380,7 @@ class _ChatScreenState extends State<_ChatScreen>
                 colors: [Color(0xFF60A5FA), Color(0xFF3B82F6)],
               ),
             ),
-            child:
-                Icon(Icons.smart_toy_rounded, color: Colors.white, size: 22.sp),
+            child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 22.sp),
           ),
           SizedBox(width: 12.w),
           Expanded(
@@ -399,7 +388,7 @@ class _ChatScreenState extends State<_ChatScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isHindi ? 'AI सहायक' : 'AI Assistant',
+                  isHindi ? 'AI सहायक' : 'AI Assistant (Gemini 1.5)',
                   style: GoogleFonts.inter(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
@@ -443,15 +432,13 @@ class _ChatScreenState extends State<_ChatScreen>
     );
   }
 
-  // ── Message list ─────────────────────────────────────────
   Widget _buildMessageList(bool isDark, ThemeData theme) {
     return Expanded(
       child: _messages.isEmpty
           ? _buildEmptyState(isDark)
           : ListView.builder(
               controller: _scrollCtrl,
-              padding:
-                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
               itemCount: _messages.length + (_isTyping ? 1 : 0),
               itemBuilder: (_, i) {
                 if (_isTyping && i == _messages.length) {
@@ -463,7 +450,6 @@ class _ChatScreenState extends State<_ChatScreen>
     );
   }
 
-  // ── Empty state ──────────────────────────────────────────
   Widget _buildEmptyState(bool isDark) {
     return Center(
       child: Column(
@@ -476,7 +462,7 @@ class _ChatScreenState extends State<_ChatScreen>
           ),
           SizedBox(height: 12.h),
           Text(
-            'Start the conversation!',
+            'Start the conversation or upload a PDF!',
             style: GoogleFonts.inter(
               fontSize: 14.sp,
               color: (isDark ? Colors.white : Colors.black).withOpacity(0.32),
@@ -487,7 +473,6 @@ class _ChatScreenState extends State<_ChatScreen>
     );
   }
 
-  // ── Chat bubble ──────────────────────────────────────────
   Widget _buildBubble(_ChatMessage msg, bool isDark, ThemeData theme) {
     final isUser = msg.isUser;
     return TweenAnimationBuilder<double>(
@@ -513,7 +498,6 @@ class _ChatScreenState extends State<_ChatScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Bot avatar
               if (!isUser)
                 Container(
                   width: 28.w,
@@ -525,13 +509,11 @@ class _ChatScreenState extends State<_ChatScreen>
                       colors: [Color(0xFF60A5FA), Color(0xFF3B82F6)],
                     ),
                   ),
-                  child: Icon(Icons.smart_toy_rounded,
-                      color: Colors.white, size: 14.sp),
+                  child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 14.sp),
                 ),
               Flexible(
                 child: Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 14.w, vertical: 11.h),
+                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 11.h),
                   decoration: BoxDecoration(
                     color: isUser
                         ? const Color(0xFF3B82F6)
@@ -544,6 +526,7 @@ class _ChatScreenState extends State<_ChatScreen>
                       bottomLeft: Radius.circular(isUser ? 18.r : 4.r),
                       bottomRight: Radius.circular(isUser ? 4.r : 18.r),
                     ),
+                    border: msg.isPdfResult ? Border.all(color: const Color(0xFF60A5FA), width: 1.5) : null,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.06),
@@ -557,8 +540,7 @@ class _ChatScreenState extends State<_ChatScreen>
                     style: GoogleFonts.inter(
                       fontSize: 13.5.sp,
                       height: 1.5,
-                      color:
-                          isUser ? Colors.white : theme.colorScheme.onSurface,
+                      color: isUser ? Colors.white : theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w400,
                     ),
                   ),
@@ -571,7 +553,6 @@ class _ChatScreenState extends State<_ChatScreen>
     );
   }
 
-  // ── Typing indicator ─────────────────────────────────────
   Widget _buildTypingIndicator(bool isDark) {
     return Align(
       alignment: Alignment.centerLeft,
@@ -579,9 +560,7 @@ class _ChatScreenState extends State<_ChatScreen>
         margin: EdgeInsets.only(bottom: 12.h, left: 34.w),
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 13.h),
         decoration: BoxDecoration(
-          color: isDark
-              ? const Color(0xFF1E293B)
-              : const Color(0xFFF1F5F9),
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(18.r),
         ),
         child: _TypingDots(isDark: isDark),
@@ -589,13 +568,9 @@ class _ChatScreenState extends State<_ChatScreen>
     );
   }
 
-  // ── Input bar ────────────────────────────────────────────
   Widget _buildInputBar(bool isDark, ThemeData theme, String hint) {
-    final borderColor = isDark
-        ? Colors.white.withOpacity(0.10)
-        : const Color(0xFF3B82F6).withOpacity(0.22);
-    final fillColor =
-        isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final borderColor = isDark ? Colors.white.withOpacity(0.10) : const Color(0xFF3B82F6).withOpacity(0.22);
+    final fillColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
 
     return SafeArea(
       top: false,
@@ -604,7 +579,21 @@ class _ChatScreenState extends State<_ChatScreen>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // ── Text field ──────────────────────────────────
+            // File Upload Button
+            GestureDetector(
+              onTap: _pickAndProcessFile,
+              child: Container(
+                margin: EdgeInsets.only(right: 8.w),
+                width: 46.w,
+                height: 46.w,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14.r),
+                  color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+                ),
+                child: Icon(Icons.attach_file_rounded, color: const Color(0xFFEF4444), size: 22.sp),
+              ),
+            ),
+            // Text field
             Expanded(
               child: Container(
                 constraints: BoxConstraints(minHeight: 48.h),
@@ -633,15 +622,14 @@ class _ChatScreenState extends State<_ChatScreen>
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16.w, vertical: 13.h),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 13.h),
                     isDense: true,
                   ),
                 ),
               ),
             ),
-            SizedBox(width: 10.w),
-            // ── Send button ─────────────────────────────────
+            SizedBox(width: 8.w),
+            // Send button
             GestureDetector(
               onTap: _sendMessage,
               child: Container(
@@ -662,8 +650,7 @@ class _ChatScreenState extends State<_ChatScreen>
                     ),
                   ],
                 ),
-                child:
-                    Icon(Icons.send_rounded, color: Colors.white, size: 20.sp),
+                child: Icon(Icons.send_rounded, color: Colors.white, size: 20.sp),
               ),
             ),
           ],
@@ -673,9 +660,6 @@ class _ChatScreenState extends State<_ChatScreen>
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// ANIMATED TYPING DOTS
-// ═══════════════════════════════════════════════════════════
 class _TypingDots extends StatefulWidget {
   final bool isDark;
   const _TypingDots({required this.isDark});
