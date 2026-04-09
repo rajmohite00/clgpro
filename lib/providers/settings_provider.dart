@@ -267,6 +267,52 @@ String tr(String text, bool isHindi) {
     'PDF Document': 'PDF दस्तावेज़',
     'Remove': 'हटाएं',
     'Please wait, this may take a moment': 'कृपया प्रतीक्षा करें, इसमें थोड़ा समय लग सकता है',
+
+    // ── Dashboard ──────────────────────────────────────────────────
+    'Welcome back,': 'वापसी पर स्वागत है,',
+    'AGENT ACTIVE': 'एजेंट सक्रिय',
+    'SCANS': 'स्कैन',
+    'STREAK': 'स्ट्रीक',
+    'ANALYTICS': 'विश्लेषण',
+    'RECENT INTEL': 'हालिया रिकॉर्ड',
+    'VIEW ALL': 'सभी देखें',
+    'NO RECORDS FOUND': 'कोई रिकॉर्ड नहीं मिला',
+    'Upload a document to begin analysis.': 'विश्लेषण शुरू करने के लिए दस्तावेज़ अपलोड करें।',
+    'INITIATE SCAN': 'स्कैन शुरू करें',
+    'Upload document for AI analysis': 'AI विश्लेषण के लिए दस्तावेज़ अपलोड करें',
+    'Enjoying DocVerify?': 'DocVerify पसंद आ रहा है?',
+    'Intel': 'होम',
+    'Archive': 'हिस्ट्री',
+    'Agent': 'प्रोफ़ाइल',
+
+    // ── Login Screen ───────────────────────────────────────────────
+    'FRAUD INTELLIGENCE SYSTEM': 'धोखाधड़ी पहचान प्रणाली',
+    'SECURE LOGIN': 'सुरक्षित लॉगिन',
+    'EMAIL ADDRESS': 'ईमेल पता',
+    'PASSWORD': 'पासवर्ड',
+    'AUTHENTICATE': 'लॉगिन करें',
+    'No account? ': 'अकाउंट नहीं है? ',
+    'Register': 'रजिस्टर करें',
+
+    // ── Signup Screen ──────────────────────────────────────────────
+    'CONFIRM PASSWORD': 'पासवर्ड दोहराएं',
+    'CREATE ACCOUNT': 'अकाउंट बनाएं',
+    'FULL NAME': 'पूरा नाम',
+    'Already have an account? ': 'पहले से अकाउंट है? ',
+    'Login': 'लॉगिन',
+
+    // ── Onboarding Screen ──────────────────────────────────────────
+    'VERIFY\nDOCUMENTS': 'दस्तावेज़\nसत्यापित करें',
+    'FRAUD DETECTION SYSTEM': 'धोखाधड़ी पहचान प्रणाली',
+    'Upload Aadhaar, PAN, or any official document.\nOur AI engine cross-checks authenticity in seconds.':
+        'आधार, PAN, या कोई भी सरकारी दस्तावेज़ अपलोड करें।\nहमारा AI सेकंडों में असलियत जांचता है।',
+    'DETECT\nMISMATCH': 'गड़बड़ी\nपकड़ें',
+    'CROSS-DOCUMENT ANALYSIS': 'दस्तावेज़ तुलना विश्लेषण',
+    'Compare multiple documents simultaneously.\nIdentify data discrepancies with precision AI analysis.':
+        'एक साथ कई दस्तावेज़ों की तुलना करें।\nAI से डेटा की गड़बड़ी सटीक रूप से पहचानें।',
+    'BEGIN ANALYSIS': 'विश्लेषण शुरू करें',
+    'CONTINUE': 'आगे बढ़ें',
+    'SKIP': 'छोड़ें',
   };
 
   return map[text] ?? text;

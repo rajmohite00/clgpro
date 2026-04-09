@@ -277,7 +277,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   _animated(2, Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      _fieldLabel('EMAIL ADDRESS', isDark),
+                                      _fieldLabel('EMAIL ADDRESS', isDark, isHindi),
                                       SizedBox(height: 6.h),
                                       _buildField(
                                         ctrl: _emailCtrl,
@@ -296,7 +296,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   _animated(3, Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      _fieldLabel('PASSWORD', isDark),
+                                      _fieldLabel('PASSWORD', isDark, isHindi),
                                       SizedBox(height: 6.h),
                                       _buildField(
                                         ctrl: _passCtrl,
@@ -432,8 +432,8 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _fieldLabel(String t, bool isDark) => Text(
-    t,
+  Widget _fieldLabel(String t, bool isDark, bool isHindi) => Text(
+    tr(t, isHindi),
     style: GoogleFonts.jetBrainsMono(
       fontSize: 9.5.sp,
       fontWeight: FontWeight.w600,

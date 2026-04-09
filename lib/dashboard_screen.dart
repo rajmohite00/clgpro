@@ -345,7 +345,7 @@ class _HomeViewState extends State<_HomeView> with SingleTickerProviderStateMixi
                                 border: Border.all(color: cs.primary.withOpacity(0.2)),
                               ),
                               child: Text(
-                                'AGENT ACTIVE',
+                                tr('AGENT ACTIVE', isHindi),
                                 style: GoogleFonts.jetBrainsMono(
                                   fontSize: 9.sp,
                                   color: cs.primary,

@@ -125,6 +125,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
 
   bool _isTyping = false;
   bool _greetingSent = false;
+  bool _lastIsHindi = false; // tracks language to detect changes
 
   // ── API KEY ROTATION ─────────────────────────────────────────
   // Add up to 5 free Gemini API keys. When one hits the rate limit,
@@ -143,7 +144,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
   // Build a model with the key at [index]
   GenerativeModel _buildModel(int keyIndex, String langInstruction) {
     return GenerativeModel(
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       apiKey: _apiKeys[keyIndex],
       safetySettings: [
         SafetySetting(HarmCategory.harassment, HarmBlockThreshold.none),
@@ -206,6 +207,25 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
           : "Hi! I'm your AI assistant 😊 I can answer questions, or you can click the 📎 icon to upload a PDF or Image and I will summarize it for you in real-time.",
       );
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Detect language change and reinitialize Gemini with correct language
+    final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
+    if (isHindi != _lastIsHindi) {
+      _lastIsHindi = isHindi;
+      _initGemini(); // Rebuild model with correct language instruction
+      if (_greetingSent) {
+        // Send a follow-up greeting in the new language
+        Future.microtask(() => _addBotMessage(
+          isHindi
+            ? "🇮🇳 Bhasha badal gayi! Ab main Hindi mein jawab dunga. 😊"
+            : "🇬🇧 Language switched to English! How can I help you? 😊",
+        ));
+      }
+    }
   }
 
   @override
@@ -326,10 +346,17 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
             } else if (errorStr.toLowerCase().contains('quota') || errorStr.contains('429')) {
               // Silently switch key
               final rotated = _rotateKey();
-              if (!rotated) rethrow;
+              if (!rotated) {
+                // Exhausted all 5 keys
+                setState(() => _isTyping = false);
+                _addBotMessage("All API keys are currently busy. Please wait 1 minute and try again.");
+                return;
+              }
               continue;
             } else {
-              rethrow;
+              setState(() => _isTyping = false);
+              _addBotMessage("Error: $err");
+              return;
             }
           }
         }
