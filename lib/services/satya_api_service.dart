@@ -47,7 +47,7 @@ class SatyaApiService {
 
   // ─── Timeout ─────────────────────────────────────────────────────────────────
   // OCR + AI processing can take time, especially on first cold boot
-  static const Duration _timeout = Duration(seconds: 90);
+  static const Duration _timeout = Duration(seconds: 180);
 
   // ════════════════════════════════════════════════════════════════════════════
   //  PUBLIC API

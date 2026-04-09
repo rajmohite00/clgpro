@@ -52,21 +52,24 @@ class DocumentProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'],
-        allowMultiple: true,
+      final picker = ImagePicker();
+      final List<XFile>? result = await picker.pickMultiImage(
+        imageQuality: 80,
+        maxWidth: 1500,
+        maxHeight: 1500,
       );
 
-      if (result != null) {
-        List<AppFile> newFiles = result.files
-            .where((f) => f.path != null)
-            .map((f) => AppFile(path: f.path!, name: f.name, size: f.size))
-            .toList();
+      if (result != null && result.isNotEmpty) {
+        List<AppFile> newFiles = [];
+        for (var f in result) {
+          final File file = File(f.path);
+          final size = await file.length();
+          newFiles.add(AppFile(path: f.path, name: f.name, size: size));
+        }
         _addFiles(newFiles);
       }
     } catch (e) {
-      _uploadError = 'Error picking files: $e';
+      _uploadError = 'Error picking images: $e';
       notifyListeners();
     }
   }
@@ -79,7 +82,9 @@ class DocumentProvider with ChangeNotifier {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
         source: ImageSource.camera,
-        imageQuality: 90,
+        imageQuality: 80,
+        maxWidth: 1500,
+        maxHeight: 1500,
       );
 
       if (pickedFile != null) {
