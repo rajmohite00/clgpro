@@ -127,7 +127,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
   bool _greetingSent = false;
 
   // Gemini Setup
-  static const String _apiKey = "AIzaSyDByuv-Y2vznv4JVg9IAcnpwU4sGXCfsT8";
+  static const String _apiKey = "AIzaSyCitrLAFN-C6qD7rFdzpsSMaidyVtOmhuM";
   late GenerativeModel _model;
   late ChatSession _chatSession;
 
@@ -208,7 +208,8 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
         response = await _chatSession.sendMessage(Content.text(text));
         break;
       } catch (err) {
-        if (err.toString().contains('503')) {
+        final errorStr = err.toString();
+        if (errorStr.contains('503')) {
           retries--;
           if (retries == 0) {
             setState(() => _isTyping = false);
@@ -216,6 +217,10 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
             return;
           }
           await Future.delayed(const Duration(seconds: 3));
+        } else if (errorStr.toLowerCase().contains('quota') || errorStr.contains('429')) {
+          setState(() => _isTyping = false);
+          _addBotMessage("Whoa there! We've hit the free tier speed limit (Too many requests). Please wait about a minute and try again. ⏱️\n\n*(Tip: If this keeps happening, you can get your own free API key from Google AI Studio!)*");
+          return;
         } else {
           setState(() => _isTyping = false);
           _addBotMessage("Error: $err");
@@ -277,10 +282,13 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
             response = await _chatSession.sendMessage(Content.multi([TextPart(promptText), documentPart]));
             break;
           } catch(err) {
-            if (err.toString().contains('503')) {
+            final errorStr = err.toString();
+            if (errorStr.contains('503')) {
               retries--;
               if (retries == 0) rethrow;
               await Future.delayed(const Duration(seconds: 3));
+            } else if (errorStr.toLowerCase().contains('quota') || errorStr.contains('429')) {
+              throw Exception("Whoa there! We've hit the free tier speed limit. Please wait about a minute and try again. ⏱️");
             } else {
               rethrow;
             }
@@ -293,7 +301,11 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
       }
     } catch (e) {
       setState(() => _isTyping = false);
-      _addBotMessage("Sorry, I encountered an error processing the file: $e");
+      String errorMsg = e.toString();
+      if (errorMsg.startsWith("Exception: ")) {
+        errorMsg = errorMsg.replaceFirst("Exception: ", "");
+      }
+      _addBotMessage(errorMsg.contains("Sorry") ? errorMsg : "Sorry, I encountered an error: $errorMsg");
     } finally {
       _isPickerActive = false;
     }
