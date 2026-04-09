@@ -126,10 +126,63 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
   bool _isTyping = false;
   bool _greetingSent = false;
 
-  // Gemini Setup
-  static const String _apiKey = "AIzaSyCitrLAFN-C6qD7rFdzpsSMaidyVtOmhuM";
+  // ── API KEY ROTATION ─────────────────────────────────────────
+  // Add up to 5 free Gemini API keys. When one hits the rate limit,
+  // the next is used automatically — completely invisible to the user.
+  static const List<String> _apiKeys = [
+    "AIzaSyCitrLAFN-C6qD7rFdzpsSMaidyVtOmhuM", // Key 1 (current)
+    "AIzaSyAfLhtjJTs-jy--wZeYOh44QVBbY_o-Xio",                          // Key 2
+    "AIzaSyAYIgw1LvfOFrUPV3SwcA_qeBD1WqkRRRQ",                          // Key 3
+    "AIzaSyC1U_8WGv7Beq-p6XojjtRTdcF8fHvTauM",                          // Key 4
+    "AIzaSyCAhycjL6fpvIqP1RrTQ7JGUwcGhCFTKck",                          // Key 5
+  ];
+  int _currentKeyIndex = 0;
   late GenerativeModel _model;
   late ChatSession _chatSession;
+
+  // Build a model with the key at [index]
+  GenerativeModel _buildModel(int keyIndex, String langInstruction) {
+    return GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: _apiKeys[keyIndex],
+      safetySettings: [
+        SafetySetting(HarmCategory.harassment, HarmBlockThreshold.none),
+        SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.none),
+        SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.none),
+        SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.none),
+      ],
+      systemInstruction: Content.system(
+        "You are the AI assistant for 'Satya Agent' (Smart Document Detective API app). "
+        "Your job is to help users upload documents, understand the AI Fraud Score (0-100%), "
+        "view results in history, or summarize uploaded PDFs. Explain things concisely and be friendly. "
+        "Use bolding and emojis to make things readable. $langInstruction",
+      ),
+    );
+  }
+
+  // Rotate to next available key; returns false if all keys are exhausted
+  bool _rotateKey() {
+    if (_currentKeyIndex < _apiKeys.length - 1) {
+      _currentKeyIndex++;
+      final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
+      final langInstruction = isHindi
+          ? 'Always reply in Hindi using English characters (Hinglish) or Devanagari based on what user uses. '
+          : 'Always reply in English. ';
+      _model = _buildModel(_currentKeyIndex, langInstruction);
+      _chatSession = _model.startChat();
+      return true;
+    }
+    return false; // All keys exhausted
+  }
+
+  void _initGemini() {
+    final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
+    final langInstruction = isHindi
+        ? 'Always reply in Hindi using English characters (Hinglish) or Devanagari based on what user uses. '
+        : 'Always reply in English. ';
+    _model = _buildModel(_currentKeyIndex, langInstruction);
+    _chatSession = _model.startChat();
+  }
 
   @override
   void initState() {
@@ -148,31 +201,11 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
       _greetingSent = true;
       final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
       _addBotMessage(
-        isHindi 
-          ? "Namaste! 😊 Main aapki madad ke liye hoon. Aap PDF ya image upload kar sakte hain summary ke liye (📎 tap karein), ya mujhse kuch bhi puch sakte hain." 
-          : "Hi! I'm your AI assistant 😊 I can answer questions, or you can click the 📎 icon to upload a PDF or Image and I will summarize it for you in real-time."
+        isHindi
+          ? "Namaste! 😊 Main aapki madad ke liye hoon. Aap PDF ya image upload kar sakte hain summary ke liye (📎 tap karein), ya mujhse kuch bhi puch sakte hain."
+          : "Hi! I'm your AI assistant 😊 I can answer questions, or you can click the 📎 icon to upload a PDF or Image and I will summarize it for you in real-time.",
       );
     });
-  }
-
-  void _initGemini() {
-    final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
-    final langInstruction = isHindi 
-      ? 'Always reply in Hindi using English characters (Hinglish) or Devanagari based on what user uses. ' 
-      : 'Always reply in English. ';
-      
-    _model = GenerativeModel(
-      model: 'gemini-2.5-flash',
-      apiKey: _apiKey,
-      safetySettings: [
-        SafetySetting(HarmCategory.harassment, HarmBlockThreshold.none),
-        SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.none),
-        SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.none),
-        SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.none),
-      ],
-      systemInstruction: Content.system("You are the AI assistant for 'Satya Agent' (Smart Document Detective API app). Your job is to help users upload documents, understand the AI Fraud Score (0-100%), view results in history, or summarize uploaded PDFs. Explain things concisely and be friendly. Use bolding and emojis to make things readable. $langInstruction"),
-    );
-    _chatSession = _model.startChat();
   }
 
   @override
@@ -202,25 +235,28 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     _inputCtrl.clear();
 
     GenerateContentResponse? response;
-    int retries = 3;
-    while (retries > 0) {
+    // Try every available key silently — user sees nothing if a key rotates
+    for (int attempt = 0; attempt < _apiKeys.length; attempt++) {
       try {
         response = await _chatSession.sendMessage(Content.text(text));
-        break;
+        break; // Success!
       } catch (err) {
         final errorStr = err.toString();
         if (errorStr.contains('503')) {
-          retries--;
-          if (retries == 0) {
+          // Server overload — brief wait, retry same key
+          await Future.delayed(const Duration(seconds: 4));
+          continue;
+        } else if (errorStr.toLowerCase().contains('quota') || errorStr.contains('429')) {
+          // Rate limited — silently switch to next key
+          final rotated = _rotateKey();
+          if (!rotated) {
+            // All 5 keys exhausted
             setState(() => _isTyping = false);
-            _addBotMessage("Google servers are too busy right now (Error 503). Please try again shortly.");
+            _addBotMessage("All API keys are currently busy. Please wait 1 minute and try again.");
             return;
           }
-          await Future.delayed(const Duration(seconds: 3));
-        } else if (errorStr.toLowerCase().contains('quota') || errorStr.contains('429')) {
-          setState(() => _isTyping = false);
-          _addBotMessage("Whoa there! We've hit the free tier speed limit (Too many requests). Please wait about a minute and try again. ⏱️\n\n*(Tip: If this keeps happening, you can get your own free API key from Google AI Studio!)*");
-          return;
+          // Retry automatically with new key (no message shown to user)
+          continue;
         } else {
           setState(() => _isTyping = false);
           _addBotMessage("Error: $err");
@@ -276,19 +312,22 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
         final documentPart = DataPart(mimeType, bytes);
         
         GenerateContentResponse? response;
-        int retries = 3;
-        while (retries > 0) {
+        // Silent key rotation for file uploads too
+        for (int attempt = 0; attempt < _apiKeys.length; attempt++) {
           try {
+            _chatSession = _model.startChat();
             response = await _chatSession.sendMessage(Content.multi([TextPart(promptText), documentPart]));
-            break;
+            break; // Success!
           } catch(err) {
             final errorStr = err.toString();
             if (errorStr.contains('503')) {
-              retries--;
-              if (retries == 0) rethrow;
               await Future.delayed(const Duration(seconds: 3));
+              continue;
             } else if (errorStr.toLowerCase().contains('quota') || errorStr.contains('429')) {
-              throw Exception("Whoa there! We've hit the free tier speed limit. Please wait about a minute and try again. ⏱️");
+              // Silently switch key
+              final rotated = _rotateKey();
+              if (!rotated) rethrow;
+              continue;
             } else {
               rethrow;
             }
@@ -400,7 +439,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isHindi ? 'AI सहायक' : 'AI Assistant (Gemini 1.5)',
+                  isHindi ? 'AI सहायक' : 'AI Assistant (Gemini 2.0 Flash)',
                   style: GoogleFonts.inter(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
