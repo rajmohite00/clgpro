@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../providers/settings_provider.dart';
 
@@ -127,62 +129,20 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
   bool _greetingSent = false;
   bool _lastIsHindi = false; // tracks language to detect changes
 
-  // ── API KEY ROTATION ─────────────────────────────────────────
-  // Add up to 5 free Gemini API keys. When one hits the rate limit,
-  // the next is used automatically — completely invisible to the user.
-  static const List<String> _apiKeys = [
-    "AIzaSyCitrLAFN-C6qD7rFdzpsSMaidyVtOmhuM", // Key 1 (current)
-    "AIzaSyAfLhtjJTs-jy--wZeYOh44QVBbY_o-Xio",                          // Key 2
-    "AIzaSyAYIgw1LvfOFrUPV3SwcA_qeBD1WqkRRRQ",                          // Key 3
-    "AIzaSyC1U_8WGv7Beq-p6XojjtRTdcF8fHvTauM",                          // Key 4
-    "AIzaSyCAhycjL6fpvIqP1RrTQ7JGUwcGhCFTKck",                          // Key 5
-  ];
-  int _currentKeyIndex = 0;
-  late GenerativeModel _model;
-  late ChatSession _chatSession;
+  // ── LOCAL LLAMA 3 STATE ──────────────────────────────────────
+  final List<Map<String, String>> _llamaHistory = [];
 
-  // Build a model with the key at [index]
-  GenerativeModel _buildModel(int keyIndex, String langInstruction) {
-    return GenerativeModel(
-      model: 'gemini-2.0-flash',
-      apiKey: _apiKeys[keyIndex],
-      safetySettings: [
-        SafetySetting(HarmCategory.harassment, HarmBlockThreshold.none),
-        SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.none),
-        SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.none),
-        SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.none),
-      ],
-      systemInstruction: Content.system(
-        "You are the AI assistant for 'Satya Agent' (Smart Document Detective API app). "
-        "Your job is to help users upload documents, understand the AI Fraud Score (0-100%), "
-        "view results in history, or summarize uploaded PDFs. Explain things concisely and be friendly. "
-        "Use bolding and emojis to make things readable. $langInstruction",
-      ),
-    );
-  }
-
-  // Rotate to next available key; returns false if all keys are exhausted
-  bool _rotateKey() {
-    if (_currentKeyIndex < _apiKeys.length - 1) {
-      _currentKeyIndex++;
-      final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
-      final langInstruction = isHindi
-          ? 'Always reply in Hindi using English characters (Hinglish) or Devanagari based on what user uses. '
-          : 'Always reply in English. ';
-      _model = _buildModel(_currentKeyIndex, langInstruction);
-      _chatSession = _model.startChat();
-      return true;
-    }
-    return false; // All keys exhausted
-  }
-
-  void _initGemini() {
+  void _initLlama() {
     final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
     final langInstruction = isHindi
         ? 'Always reply in Hindi using English characters (Hinglish) or Devanagari based on what user uses. '
         : 'Always reply in English. ';
-    _model = _buildModel(_currentKeyIndex, langInstruction);
-    _chatSession = _model.startChat();
+        
+    _llamaHistory.clear();
+    _llamaHistory.add({
+      "role": "system",
+      "content": "You are the AI assistant for 'Satya Agent' (Smart Document Detective API app). Your job is to help users upload documents, view results, or summarize PDFs. Explain things concisely and be friendly. Use bolding and emojis to make things readable. $langInstruction"
+    });
   }
 
   @override
@@ -195,7 +155,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     _sheetAnim = CurvedAnimation(parent: _sheetCtrl, curve: Curves.easeOutCubic);
     _sheetCtrl.forward();
 
-    _initGemini();
+    _initLlama();
 
     Future.delayed(const Duration(milliseconds: 380), () {
       if (!mounted || _greetingSent) return;
@@ -216,7 +176,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
     if (isHindi != _lastIsHindi) {
       _lastIsHindi = isHindi;
-      _initGemini(); // Rebuild model with correct language instruction
+      _initLlama(); // Rebuild with correct language instruction
       if (_greetingSent) {
         // Send a follow-up greeting in the new language
         Future.microtask(() => _addBotMessage(
@@ -254,39 +214,38 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     _scrollToBottom();
     _inputCtrl.clear();
 
-    GenerateContentResponse? response;
-    // Try every available key silently — user sees nothing if a key rotates
-    for (int attempt = 0; attempt < _apiKeys.length; attempt++) {
-      try {
-        response = await _chatSession.sendMessage(Content.text(text));
-        break; // Success!
-      } catch (err) {
-        final errorStr = err.toString();
-        if (errorStr.contains('503')) {
-          // Server overload — brief wait, retry same key
-          await Future.delayed(const Duration(seconds: 4));
-          continue;
-        } else if (errorStr.toLowerCase().contains('quota') || errorStr.contains('429')) {
-          // Rate limited — silently switch to next key
-          final rotated = _rotateKey();
-          if (!rotated) {
-            // All 5 keys exhausted
-            setState(() => _isTyping = false);
-            _addBotMessage("All API keys are currently busy. Please wait 1 minute and try again.");
-            return;
-          }
-          // Retry automatically with new key (no message shown to user)
-          continue;
-        } else {
-          setState(() => _isTyping = false);
-          _addBotMessage("Error: $err");
-          return;
-        }
-      }
-    }
+    _llamaHistory.add({"role": "user", "content": text});
 
-    setState(() => _isTyping = false);
-    _addBotMessage(response?.text ?? "I couldn't process that.");
+    final apiKey = dotenv.env['GROQ_API_KEY'] ?? "";
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode({
+          "model": "llama-3.1-8b-instant",
+          "messages": _llamaHistory,
+          "temperature": 0.7
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final reply = data['choices'][0]['message']['content'];
+        _llamaHistory.add({"role": "assistant", "content": reply});
+        setState(() => _isTyping = false);
+        _addBotMessage(reply);
+      } else {
+        setState(() => _isTyping = false);
+        _addBotMessage("🚨 **Groq API Error** 🚨\n\nCode: ${response.statusCode}");
+      }
+    } catch (e) {
+      setState(() => _isTyping = false);
+      _addBotMessage("🚨 **Connection Failed** 🚨\n\nCould not connect to Groq Cloud.");
+    }
   }
 
   bool _isPickerActive = false;
@@ -313,57 +272,59 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
 
         final File file = File(filePath);
         final bytes = await file.readAsBytes();
-        final promptText = "I have uploaded a document named '$fileName'. Please provide a clear summary of this document, state the main points, and suggest any actions or solutions I should take based on it.";
 
-        String mimeType;
+        String extractedText = "";
         if (ext == 'pdf') {
-          mimeType = 'application/pdf';
-        } else if (ext == 'png') {
-          mimeType = 'image/png';
-        } else if (ext == 'webp') {
-          mimeType = 'image/webp';
+          final PdfDocument document = PdfDocument(inputBytes: bytes);
+          extractedText = PdfTextExtractor(document).extractText();
+          document.dispose();
+          
+          if (extractedText.trim().isEmpty) {
+            extractedText = "[Could not extract text from this PDF. It might be scanned images.]";
+          }
         } else {
-          mimeType = 'image/jpeg';
+          setState(() => _isTyping = false);
+          _addBotMessage("📸 **Image Uploaded**\n\n*Note: The local Llama-3 model only supports text PDFs right now. I cannot 'see' images yet!*");
+          _isPickerActive = false;
+          return;
         }
 
-        // RESET CHAT SESSION SO IT DOESNT OVERLOAD NETWORK WITH OLD IMAGES
-        _chatSession = _model.startChat();
-        
-        final documentPart = DataPart(mimeType, bytes);
-        
-        GenerateContentResponse? response;
-        // Silent key rotation for file uploads too
-        for (int attempt = 0; attempt < _apiKeys.length; attempt++) {
-          try {
-            _chatSession = _model.startChat();
-            response = await _chatSession.sendMessage(Content.multi([TextPart(promptText), documentPart]));
-            break; // Success!
-          } catch(err) {
-            final errorStr = err.toString();
-            if (errorStr.contains('503')) {
-              await Future.delayed(const Duration(seconds: 3));
-              continue;
-            } else if (errorStr.toLowerCase().contains('quota') || errorStr.contains('429')) {
-              // Silently switch key
-              final rotated = _rotateKey();
-              if (!rotated) {
-                // Exhausted all 5 keys
-                setState(() => _isTyping = false);
-                _addBotMessage("All API keys are currently busy. Please wait 1 minute and try again.");
-                return;
-              }
-              continue;
-            } else {
-              setState(() => _isTyping = false);
-              _addBotMessage("Error: $err");
-              return;
-            }
+        final promptText = "I have uploaded a document named '$fileName'. Here is the text extracted from it:\n\n---\n$extractedText\n---\n\nPlease provide a clear summary of this document, state the main points, and suggest any actions or solutions I should take based on it. Keep your answer clean and readable.";
+
+        // Clear history to save context size when doing document summaries
+        _initLlama(); 
+        _llamaHistory.add({"role": "user", "content": promptText});
+
+        final apiKey = dotenv.env['GROQ_API_KEY'] ?? "";
+
+        try {
+          final response = await http.post(
+            Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $apiKey',
+            },
+            body: jsonEncode({
+              "model": "llama-3.1-8b-instant",
+              "messages": _llamaHistory,
+              "temperature": 0.3 
+            }),
+          );
+          
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            final reply = data['choices'][0]['message']['content'];
+            _llamaHistory.add({"role": "assistant", "content": reply});
+            setState(() => _isTyping = false);
+            _addBotMessage("📄 **Analysis Complete**\n\n$reply", isPdfResult: true);
+          } else {
+            setState(() => _isTyping = false);
+            _addBotMessage("🚨 **Groq API Error** 🚨\n\nCode: ${response.statusCode}");
           }
+        } catch (err) {
+          setState(() => _isTyping = false);
+          _addBotMessage("🚨 **Connection Failed** 🚨\n\nCould not connect to Groq cloud.");
         }
-        
-        setState(() => _isTyping = false);
-        final iconEmoji = ext == 'pdf' ? '📄' : '🖼️';
-        _addBotMessage("$iconEmoji **Analysis Complete**\n\n${response?.text ?? 'No response'}", isPdfResult: true);
       }
     } catch (e) {
       setState(() => _isTyping = false);
@@ -466,7 +427,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isHindi ? 'AI सहायक' : 'AI Assistant (Gemini 2.0 Flash)',
+                  isHindi ? 'AI सहायक' : 'AI Assistant (Groq Cloud Llama 3)',
                   style: GoogleFonts.inter(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
