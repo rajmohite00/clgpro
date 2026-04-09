@@ -84,23 +84,23 @@ class _SignupScreenState extends State<SignupScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final bgColor = isDark ? AppTheme.primary : AppTheme.neutral;
-    final cardColor = isDark ? AppTheme.surfaceDark : Colors.white;
-    final textColor = isDark ? Colors.white : AppTheme.textPrimary;
-    final mutedColor = isDark ? Colors.white54 : AppTheme.textSecondary;
-    final borderColor = isDark ? AppTheme.borderDark : AppTheme.borderLight;
+    final bgColor = isDark ? AppTheme.ink : AppTheme.lightBg;
+    final cardColor = isDark ? AppTheme.inkMid : Colors.white;
+    final textColor = isDark ? AppTheme.textPrimary : AppTheme.lightText;
+    final mutedColor = isDark ? AppTheme.textSecondary : AppTheme.lightTextSub;
+    final borderColor = isDark ? AppTheme.borderLight : AppTheme.lightBorder;
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: isDark ? AppTheme.primary : Colors.white,
+        backgroundColor: isDark ? AppTheme.ink : Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: Container(
             padding: EdgeInsets.all(8.w),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withOpacity(0.08) : AppTheme.neutral,
+              color: isDark ? Colors.white.withOpacity(0.08) : AppTheme.lightBorder.withOpacity(0.3),
               borderRadius: BorderRadius.circular(10.r),
               border: Border.all(color: borderColor),
             ),
@@ -132,11 +132,11 @@ class _SignupScreenState extends State<SignupScreen> {
                             width: 64.w,
                             height: 64.w,
                             decoration: BoxDecoration(
-                              color: AppTheme.secondary,
+                              color: AppTheme.jade,
                               borderRadius: BorderRadius.circular(18.r),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTheme.secondary.withOpacity(0.25),
+                                  color: AppTheme.jade.withOpacity(0.25),
                                   blurRadius: 16.r,
                                   offset: Offset(0, 6.h),
                                 ),
@@ -270,11 +270,11 @@ class _SignupScreenState extends State<SignupScreen> {
                             child: Container(
                               height: 52.h,
                               decoration: BoxDecoration(
-                                color: AppTheme.secondary,
+                                color: AppTheme.jade,
                                 borderRadius: BorderRadius.circular(14.r),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppTheme.secondary.withOpacity(0.30),
+                                    color: AppTheme.jade.withOpacity(0.30),
                                     blurRadius: 16.r,
                                     offset: Offset(0, 6.h),
                                   ),
@@ -285,14 +285,14 @@ class _SignupScreenState extends State<SignupScreen> {
                                   ? const SizedBox(
                                       height: 20,
                                       width: 20,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                      child: CircularProgressIndicator(color: AppTheme.ink, strokeWidth: 2.5),
                                     )
                                   : Text(
                                       tr('Create Account', isHindi),
                                       style: GoogleFonts.inter(
                                         fontSize: 15.sp,
                                         fontWeight: FontWeight.w700,
-                                        color: Colors.white,
+                                        color: AppTheme.ink,
                                         letterSpacing: 0.2,
                                       ),
                                     ),
@@ -321,7 +321,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.w700,
-                              color: AppTheme.secondary,
+                              color: AppTheme.jade,
                             ),
                           ),
                         ),
@@ -362,14 +362,14 @@ class _SignupScreenState extends State<SignupScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : AppTheme.neutral,
+        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-          color: isFocused ? AppTheme.secondary : borderColor,
+          color: isFocused ? AppTheme.jade : borderColor,
           width: isFocused ? 1.5 : 1,
         ),
         boxShadow: isFocused
-            ? [BoxShadow(color: AppTheme.secondary.withOpacity(0.10), blurRadius: 8.r)]
+            ? [BoxShadow(color: AppTheme.jade.withOpacity(0.10), blurRadius: 8.r)]
             : null,
       ),
       child: TextField(
@@ -378,13 +378,13 @@ class _SignupScreenState extends State<SignupScreen> {
         obscureText: isPassword && !visible,
         keyboardType: keyboardType,
         style: GoogleFonts.inter(color: textColor, fontSize: 14.sp, fontWeight: FontWeight.w500),
-        cursorColor: AppTheme.secondary,
+        cursorColor: AppTheme.jade,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.inter(color: AppTheme.textMuted, fontSize: 14.sp),
           prefixIcon: Icon(
             icon,
-            color: isFocused ? AppTheme.secondary : AppTheme.textMuted,
+            color: isFocused ? AppTheme.jade : AppTheme.textMuted,
             size: 18.sp,
           ),
           suffixIcon: isPassword

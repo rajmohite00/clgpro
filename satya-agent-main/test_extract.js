@@ -1,0 +1,1 @@
+const { extractData } = require('./services/extractionTool.js'); console.log(extractData('i L  Sailors sirius Anning of QR code / off\n[ 2622 3189 7983roof of identity, not of cit\n| AIT svar, ALYY ggATE [\nE a .'));

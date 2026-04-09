@@ -2,14 +2,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import '../services/satya_api_service.dart';
 
 class AppFile {
   final String path;
   final String name;
   final int size;
-  
+
   bool get isPdf => name.toLowerCase().endsWith('.pdf');
-  
+
   AppFile({
     required this.path,
     required this.name,
@@ -22,9 +23,13 @@ class DocumentProvider with ChangeNotifier {
   bool _isUploading = false;
   String? _uploadError;
 
+  // The last result returned from the Satya API
+  SatyaResult? _lastResult;
+
   List<AppFile> get selectedFiles => _selectedFiles;
   bool get isUploading => _isUploading;
   String? get uploadError => _uploadError;
+  SatyaResult? get lastResult => _lastResult;
 
   final int _maxFileSize = 10 * 1024 * 1024; // 10MB
 
@@ -49,7 +54,7 @@ class DocumentProvider with ChangeNotifier {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'],
         allowMultiple: true,
       );
 
@@ -72,14 +77,17 @@ class DocumentProvider with ChangeNotifier {
 
     try {
       final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.camera);
-      
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 90,
+      );
+
       if (pickedFile != null) {
         final File file = File(pickedFile.path);
         final size = await file.length();
         final appFile = AppFile(
-          path: pickedFile.path, 
-          name: pickedFile.name, 
+          path: pickedFile.path,
+          name: pickedFile.name,
           size: size,
         );
         _addFiles([appFile]);
@@ -100,8 +108,19 @@ class DocumentProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Upload to API
-  Future<String?> uploadDocuments() async {
+  void clearAll() {
+    _selectedFiles = [];
+    _lastResult = null;
+    _uploadError = null;
+    notifyListeners();
+  }
+
+  /// Upload documents to Satya Agent API and return the result data map
+  /// for use in ResultScreen / history.
+  ///
+  /// Returns a [Map<String, dynamic>] compatible with ResultScreen on success.
+  /// Returns null on failure (error is set in [uploadError]).
+  Future<Map<String, dynamic>?> uploadDocuments() async {
     if (_selectedFiles.isEmpty) return null;
 
     _isUploading = true;
@@ -109,18 +128,40 @@ class DocumentProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Simulate API call to /upload-docs
-      await Future.delayed(const Duration(seconds: 3));
-      
-      // Simulate successful upload and getting docId
-      String dummyDocId = "DOC_${DateTime.now().millisecondsSinceEpoch}";
-      
+      // Convert AppFile list to File list (images only — API accepts images)
+      final imageFiles = _selectedFiles
+          .where((f) => !f.isPdf)
+          .map((f) => File(f.path))
+          .toList();
+
+      if (imageFiles.isEmpty) {
+        _uploadError = 'Please select at least one image file (JPG, PNG, etc.).\nPDF is not currently supported by the verification API.';
+        _isUploading = false;
+        notifyListeners();
+        return null;
+      }
+
+      // Call the Satya Agent API
+      final SatyaResult result;
+      if (imageFiles.length == 1) {
+        result = await SatyaApiService.verifySingleDocument(imageFiles.first);
+      } else {
+        result = await SatyaApiService.verifyMultipleDocuments(imageFiles);
+      }
+
+      _lastResult = result;
       _isUploading = false;
       notifyListeners();
-      
-      return dummyDocId;
+
+      // Return result in a format compatible with ResultScreen
+      return result.toResultScreenData();
+    } on SatyaApiException catch (e) {
+      _uploadError = e.message;
+      _isUploading = false;
+      notifyListeners();
+      return null;
     } catch (e) {
-      _uploadError = 'Failed to upload documents. Please try again.';
+      _uploadError = 'Failed to verify documents. Please try again.\n$e';
       _isUploading = false;
       notifyListeners();
       return null;

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'splash_screen.dart';
+
 import 'providers/auth_provider.dart';
 import 'providers/document_provider.dart';
 import 'providers/theme_provider.dart';
@@ -35,16 +36,16 @@ class MyApp extends StatelessWidget {
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
-          if (!themeProvider.isLoaded) return const SizedBox(); // Prevent flash
+          if (!themeProvider.isLoaded) return const SizedBox();
           return LayoutBuilder(
             builder: (context, constraints) {
               final isDesktop = constraints.maxWidth > 600;
-              final designSize = isDesktop 
-                  ? Size(constraints.maxWidth, constraints.maxHeight) 
+              final designSize = isDesktop
+                  ? Size(constraints.maxWidth, constraints.maxHeight)
                   : const Size(375, 812);
 
               return ScreenUtilInit(
-                designSize: designSize, // dynamically limits desktop blowout
+                designSize: designSize,
                 minTextAdapt: true,
                 splitScreenMode: true,
                 builder: (context, child) {
@@ -65,3 +66,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+

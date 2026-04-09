@@ -1,12 +1,13 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'login_screen.dart';
 import 'dashboard_screen.dart';
 import 'onboarding_screen.dart';
 import 'providers/theme_provider.dart';
+import 'widgets/logo_widget.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,288 +16,499 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
-  late AnimationController _mainController;
-  late AnimationController _pulseController;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _slideAnimation;
-  late Animation<double> _progressAnimation;
-  late Animation<double> _pulseAnimation;
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _gridCtrl;
+  late AnimationController _contentCtrl;
+  late AnimationController _scanCtrl;
+  late AnimationController _glowCtrl;
+
+  late Animation<double> _gridReveal;
+  late Animation<double> _logoFade;
+  late Animation<double> _logoScale;
+  late Animation<double> _textSlide;
+  late Animation<double> _statusFade;
+  late Animation<double> _progressBar;
+  late Animation<double> _glowPulse;
+
+  // Typewriter state
+  final List<String> _bootLines = [
+    'INITIALIZING FORENSIC ENGINE...',
+    'LOADING AI VERIFICATION MODEL...',
+    'ESTABLISHING SECURE CHANNEL...',
+    'READY.',
+  ];
+  int _visibleLines = 0;
+  Timer? _typeTimer;
 
   @override
   void initState() {
     super.initState();
 
-    _mainController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
+    _gridCtrl = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1200),
     );
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
+    _contentCtrl = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1000),
+    );
+    _scanCtrl = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 2000),
+    )..repeat();
+    _glowCtrl = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1600),
     )..repeat(reverse: true);
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _mainController, curve: const Interval(0.0, 0.5, curve: Curves.easeOut)),
+    _gridReveal = CurvedAnimation(parent: _gridCtrl, curve: Curves.easeOut);
+
+    _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _contentCtrl, curve: const Interval(0.0, 0.4, curve: Curves.easeOut)),
     );
-    _scaleAnimation = Tween<double>(begin: 0.75, end: 1.0).animate(
-      CurvedAnimation(parent: _mainController, curve: const Interval(0.0, 0.55, curve: Curves.easeOutBack)),
+    _logoScale = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _contentCtrl, curve: const Interval(0.0, 0.5, curve: Curves.easeOutBack)),
     );
-    _slideAnimation = Tween<double>(begin: 30, end: 0).animate(
-      CurvedAnimation(parent: _mainController, curve: const Interval(0.3, 0.8, curve: Curves.easeOut)),
+    _textSlide = Tween<double>(begin: 24, end: 0).animate(
+      CurvedAnimation(parent: _contentCtrl, curve: const Interval(0.25, 0.7, curve: Curves.easeOutCubic)),
     );
-    _progressAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _mainController, curve: const Interval(0.5, 1.0, curve: Curves.easeInOut)),
+    _statusFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _contentCtrl, curve: const Interval(0.4, 0.8, curve: Curves.easeOut)),
     );
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    _progressBar = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _contentCtrl, curve: const Interval(0.5, 1.0, curve: Curves.easeInOut)),
+    );
+    _glowPulse = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _glowCtrl, curve: Curves.easeInOut),
     );
 
-    _mainController.forward();
+    // Boot sequence
+    _gridCtrl.forward();
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) _contentCtrl.forward();
+    });
+    Future.delayed(const Duration(milliseconds: 800), () {
+      _startTypewriter();
+    });
+
     _checkAuthentication();
   }
 
+  void _startTypewriter() {
+    int line = 0;
+    _typeTimer = Timer.periodic(const Duration(milliseconds: 380), (t) {
+      if (!mounted) { t.cancel(); return; }
+      if (line < _bootLines.length) {
+        setState(() => _visibleLines = line + 1);
+        line++;
+      } else {
+        t.cancel();
+      }
+    });
+  }
+
   Future<void> _checkAuthentication() async {
-    await Future.delayed(const Duration(milliseconds: 2800));
+    await Future.delayed(const Duration(milliseconds: 3000));
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
 
     if (!mounted) return;
 
-    if (token != null && token.isNotEmpty) {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const DashboardScreen(),
-          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const OnboardingScreen(),
-          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
-    }
+    final dest = (token != null && token.isNotEmpty)
+        ? const DashboardScreen()
+        : const OnboardingScreen();
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => dest,
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+        transitionDuration: const Duration(milliseconds: 600),
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _mainController.dispose();
-    _pulseController.dispose();
+    _gridCtrl.dispose();
+    _contentCtrl.dispose();
+    _scanCtrl.dispose();
+    _glowCtrl.dispose();
+    _typeTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.neutral,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: AppTheme.neutral,
-        child: SafeArea(
-          child: AnimatedBuilder(
-            animation: _mainController,
-            builder: (context, _) {
-              return Column(
-                children: [
-                  // ── Top spacer ──────────────────────────────────────────
-                  const Spacer(flex: 2),
+      backgroundColor: AppTheme.ink,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // ── Animated grid background ──────────────────────────────────────
+          AnimatedBuilder(
+            animation: _gridReveal,
+            builder: (_, __) => CustomPaint(
+              painter: _GridPainter(_gridReveal.value),
+            ),
+          ),
 
-                  // ── Logo ────────────────────────────────────────────────
-                  FadeTransition(
-                    opacity: _fadeAnimation,
+          // ── Moving scanline ───────────────────────────────────────────────
+          AnimatedBuilder(
+            animation: _scanCtrl,
+            builder: (_, __) {
+              final h = MediaQuery.of(context).size.height;
+              return Positioned(
+                top: h * _scanCtrl.value,
+                left: 0, right: 0,
+                child: Container(
+                  height: 2,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        AppTheme.jade.withOpacity(0.3),
+                        AppTheme.jade.withOpacity(0.6),
+                        AppTheme.jade.withOpacity(0.3),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // ── Main content ──────────────────────────────────────────────────
+          SafeArea(
+            child: AnimatedBuilder(
+              animation: _contentCtrl,
+              builder: (_, __) => Column(
+                children: [
+                  const Spacer(flex: 3),
+
+                  // ── Logo mark ─────────────────────────────────────────────
+                  Opacity(
+                    opacity: _logoFade.value,
                     child: Transform.scale(
-                      scale: _scaleAnimation.value,
+                      scale: _logoScale.value,
                       child: AnimatedBuilder(
-                        animation: _pulseController,
-                        builder: (context, child) {
-                          return Transform.scale(
-                            scale: _pulseAnimation.value,
-                            child: _buildLogo(),
-                          );
-                        },
+                        animation: _glowCtrl,
+                        builder: (_, child) => Container(
+                          width: 88.w,
+                          height: 88.w,
+                          decoration: BoxDecoration(
+                            color: AppTheme.inkMid,
+                            borderRadius: BorderRadius.circular(20.r),
+                            border: Border.all(
+                              color: AppTheme.jade.withOpacity(0.5 * _glowPulse.value),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.jade.withOpacity(0.25 * _glowPulse.value),
+                                blurRadius: 40,
+                                spreadRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: _HexShieldIcon(
+                              color: AppTheme.jade,
+                              size: 44.sp,
+                              glowOpacity: _glowPulse.value,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
 
-                  SizedBox(height: 32.h),
+                  SizedBox(height: 28.h),
 
-                  // ── App Name ─────────────────────────────────────────────
+                  // ── App name ──────────────────────────────────────────────
                   Transform.translate(
-                    offset: Offset(0, _slideAnimation.value),
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
+                    offset: Offset(0, _textSlide.value),
+                    child: Opacity(
+                      opacity: _logoFade.value,
                       child: Column(
                         children: [
                           Text(
-                            'DocVerify',
-                            style: GoogleFonts.inter(
-                              fontSize: 34.sp,
+                            'DOCVERIFY',
+                            style: GoogleFonts.syne(
+                              fontSize: 28.sp,
                               fontWeight: FontWeight.w800,
-                              color: AppTheme.primary,
-                              letterSpacing: -1.0,
+                              color: AppTheme.textPrimary,
+                              letterSpacing: 4.0,
                             ),
                           ),
                           SizedBox(height: 6.h),
-                          Text(
-                            'Smart Document Detective',
-                            style: GoogleFonts.inter(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w500,
-                              color: AppTheme.textSecondary,
-                              letterSpacing: 0.2,
-                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 20.w, height: 1,
+                                color: AppTheme.jade.withOpacity(0.4),
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                'FRAUD INTELLIGENCE SYSTEM',
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 9.5.sp,
+                                  color: AppTheme.jade.withOpacity(0.7),
+                                  letterSpacing: 2.5,
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              Container(
+                                width: 20.w, height: 1,
+                                color: AppTheme.jade.withOpacity(0.4),
+                              ),
+                            ],
                           ),
-                          SizedBox(height: 10.h),
-                          // AI badge
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
-                            decoration: BoxDecoration(
-                              color: AppTheme.blueLight,
-                              borderRadius: BorderRadius.circular(20.r),
-                              border: Border.all(color: AppTheme.blueMid),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const Spacer(flex: 2),
+
+                  // ── Boot log terminal ─────────────────────────────────────
+                  Opacity(
+                    opacity: _statusFade.value,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 32.w),
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(14.w),
+                        decoration: BoxDecoration(
+                          color: AppTheme.inkMid,
+                          borderRadius: BorderRadius.circular(8.r),
+                          border: Border.all(
+                            color: AppTheme.borderLight,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
                                 Container(
-                                  width: 6.w,
-                                  height: 6.w,
-                                  decoration: const BoxDecoration(
-                                    color: AppTheme.secondary,
+                                  width: 8.w, height: 8.w,
+                                  decoration: BoxDecoration(
                                     shape: BoxShape.circle,
+                                    color: AppTheme.jade,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppTheme.jade.withOpacity(0.5),
+                                        blurRadius: 6,
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 SizedBox(width: 6.w),
                                 Text(
-                                  'AI-Powered Verification',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.secondary,
-                                    letterSpacing: 0.3,
+                                  'SYSTEM BOOT',
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 9.sp,
+                                    color: AppTheme.jade,
+                                    letterSpacing: 2,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
+                            SizedBox(height: 10.h),
+                            ...List.generate(_visibleLines, (i) => Padding(
+                              padding: EdgeInsets.only(bottom: 4.h),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    '> ',
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 10.sp,
+                                      color: AppTheme.jade.withOpacity(0.6),
+                                    ),
+                                  ),
+                                  Text(
+                                    _bootLines[i],
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 10.sp,
+                                      color: i == _visibleLines - 1
+                                          ? AppTheme.textPrimary
+                                          : AppTheme.textMuted,
+                                      fontWeight: i == _visibleLines - 1
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )),
+                            // Cursor blink
+                            if (_visibleLines < _bootLines.length) ...[
+                              SizedBox(height: 2.h),
+                              _BlinkingCursor(),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
 
-                  const Spacer(flex: 2),
+                  SizedBox(height: 20.h),
 
-                  // ── Progress Bar ─────────────────────────────────────────
-                  FadeTransition(
-                    opacity: _fadeAnimation,
+                  // ── Progress bar ──────────────────────────────────────────
+                  Opacity(
+                    opacity: _statusFade.value,
                     child: Padding(
-                      padding: EdgeInsets.only(bottom: 48.h, left: 48.w, right: 48.w),
+                      padding: EdgeInsets.symmetric(horizontal: 32.w),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            height: 3.h,
-                            decoration: BoxDecoration(
-                              color: AppTheme.borderLight,
-                              borderRadius: BorderRadius.circular(2.r),
-                            ),
-                            child: FractionallySizedBox(
-                              alignment: Alignment.centerLeft,
-                              widthFactor: _progressAnimation.value,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: AppTheme.secondary,
-                                  borderRadius: BorderRadius.circular(2.r),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(2.r),
+                            child: Container(
+                              height: 3.h,
+                              color: AppTheme.inkMid,
+                              child: FractionallySizedBox(
+                                alignment: Alignment.centerLeft,
+                                widthFactor: _progressBar.value,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        AppTheme.jade.withOpacity(0.5),
+                                        AppTheme.jade,
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppTheme.jade.withOpacity(0.5),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                          SizedBox(height: 12.h),
-                          Text(
-                            'Loading...',
-                            style: GoogleFonts.inter(
-                              fontSize: 12.sp,
-                              color: AppTheme.textMuted,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
                         ],
                       ),
                     ),
                   ),
+
+                  SizedBox(height: 48.h),
                 ],
-              );
-            },
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildLogo() {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // Outer diffuse ring
-        Container(
-          width: 130.w,
-          height: 130.w,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppTheme.blueLight,
-          ),
-        ),
-        // Mid ring
-        Container(
-          width: 100.w,
-          height: 100.w,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppTheme.blueMid.withOpacity(0.35),
-          ),
-        ),
-        // Core icon
-        Container(
-          width: 72.w,
-          height: 72.w,
-          decoration: BoxDecoration(
-            color: AppTheme.secondary,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.secondary.withOpacity(0.30),
-                blurRadius: 24.r,
-                offset: Offset(0, 8.h),
-              ),
-            ],
-          ),
-          child: Icon(
-            Icons.document_scanner_rounded,
-            size: 32.sp,
-            color: Colors.white,
-          ),
-        ),
-        // Verified badge
-        Positioned(
-          right: 18.w,
-          bottom: 18.w,
-          child: Container(
-            padding: EdgeInsets.all(4.w),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppTheme.success,
-              border: Border.all(color: AppTheme.neutral, width: 2.5),
-            ),
-            child: Icon(Icons.verified_rounded, size: 10.sp, color: Colors.white),
-          ),
-        ),
-      ],
-    );
+// ── Custom hex-shield icon using CustomPainter ────────────────────────────────
+class _HexShieldIcon extends StatelessWidget {
+  final Color color;
+  final double size;
+  final double glowOpacity;
+  const _HexShieldIcon({required this.color, required this.size, this.glowOpacity = 1.0});
+
+  @override
+  Widget build(BuildContext context) => DocVerifyLogo(
+    size: size,
+    color: color,
+    glowOpacity: glowOpacity,
+  );
+}
+
+// ── Blinking cursor ───────────────────────────────────────────────────────────
+class _BlinkingCursor extends StatefulWidget {
+  @override
+  State<_BlinkingCursor> createState() => _BlinkingCursorState();
+}
+
+class _BlinkingCursorState extends State<_BlinkingCursor>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat(reverse: true);
   }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _ctrl,
+    builder: (_, __) => Opacity(
+      opacity: _ctrl.value,
+      child: Container(
+        width: 8, height: 14,
+        color: AppTheme.jade,
+      ),
+    ),
+  );
+}
+
+// ── Isometric grid background painter ────────────────────────────────────────
+class _GridPainter extends CustomPainter {
+  final double progress;
+  _GridPainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppTheme.jade.withOpacity(0.04)
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    const spacing = 36.0;
+
+    // Vertical lines — draw progressively
+    final vLines = (size.width / spacing).ceil() + 1;
+    for (int i = 0; i < vLines; i++) {
+      final x = i * spacing;
+      final lineProgress = (progress * vLines - i).clamp(0.0, 1.0);
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, size.height * lineProgress),
+        paint,
+      );
+    }
+
+    // Horizontal lines
+    final hLines = (size.height / spacing).ceil() + 1;
+    for (int i = 0; i < hLines; i++) {
+      final y = i * spacing;
+      final lineProgress = (progress * hLines - i).clamp(0.0, 1.0);
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width * lineProgress, y),
+        paint,
+      );
+    }
+
+    // Corner accent dots at intersections (only when nearly fully revealed)
+    if (progress > 0.7) {
+      final dotPaint = Paint()
+        ..color = AppTheme.jade.withOpacity(0.12 * ((progress - 0.7) / 0.3))
+        ..style = PaintingStyle.fill;
+
+      for (int i = 0; i <= vLines; i++) {
+        for (int j = 0; j <= hLines; j++) {
+          canvas.drawCircle(
+            Offset(i * spacing, j * spacing), 1.5, dotPaint,
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GridPainter old) => old.progress != progress;
 }

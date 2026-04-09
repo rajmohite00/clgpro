@@ -237,20 +237,6 @@ class _ChatScreenState extends State<_ChatScreen>
   bool _isTyping = false;
   bool _greetingSent = false;
 
-  // ── Quick reply chip definitions (EN / HI) ───────────────
-  static const _chipsEn = [
-    ('📤', 'How to upload'),
-    ('📱', 'App features'),
-    ('📋', 'View results'),
-    ('📥', 'Download report'),
-  ];
-  static const _chipsHi = [
-    ('📤', 'Upload kaise karein'),
-    ('📱', 'App features kya hain'),
-    ('📋', 'Result kaise dekhein'),
-    ('📥', 'Report download karo'),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -334,7 +320,6 @@ class _ChatScreenState extends State<_ChatScreen>
     final isDark = theme.brightness == Brightness.dark;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    final chips = isHindi ? _chipsHi : _chipsEn;
     final hintText = isHindi ? 'Kuch puchho...' : 'Ask something...';
     final headerSubtitle =
         isHindi ? 'Online · hamesha yahan hoon' : 'Online · always here for you';
@@ -366,8 +351,6 @@ class _ChatScreenState extends State<_ChatScreen>
             _buildHeader(isDark, theme, isHindi, headerSubtitle),
             Divider(height: 1, color: theme.dividerColor.withOpacity(0.08)),
             _buildMessageList(isDark, theme),
-            // Show chips only while conversation is short
-            if (_messages.length <= 2) _buildChips(chips, isDark),
             _buildInputBar(isDark, theme, hintText),
           ],
         ),
@@ -606,111 +589,81 @@ class _ChatScreenState extends State<_ChatScreen>
     );
   }
 
-  // ── Quick reply chips ────────────────────────────────────
-  Widget _buildChips(List<(String, String)> chips, bool isDark) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      child: Row(
-        children: chips.map((chip) {
-          final label = '${chip.$1} ${chip.$2}';
-          return Padding(
-            padding: EdgeInsets.only(right: 8.w),
-            child: GestureDetector(
-              onTap: () => _sendMessage(override: chip.$2),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding:
-                    EdgeInsets.symmetric(horizontal: 14.w, vertical: 9.h),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1E293B)
-                      : const Color(0xFFEFF6FF),
-                  border: Border.all(
-                    color: const Color(0xFF3B82F6).withOpacity(0.35),
-                  ),
-                  borderRadius: BorderRadius.circular(20.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF3B82F6).withOpacity(0.08),
-                      blurRadius: 6,
-                    ),
-                  ],
-                ),
-                child: Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF3B82F6),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
   // ── Input bar ────────────────────────────────────────────
   Widget _buildInputBar(bool isDark, ThemeData theme, String hint) {
+    final borderColor = isDark
+        ? Colors.white.withOpacity(0.10)
+        : const Color(0xFF3B82F6).withOpacity(0.22);
+    final fillColor =
+        isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+
     return SafeArea(
-      child: Container(
-        margin: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 12.h),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(28.r),
-          border: Border.all(
-            color: const Color(0xFF3B82F6).withOpacity(0.2),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 10.r,
-              offset: Offset(0, 2.h),
-            ),
-          ],
-        ),
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(14.w, 8.h, 14.w, 14.h),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            // ── Text field ──────────────────────────────────
             Expanded(
-              child: TextField(
-                controller: _inputCtrl,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _sendMessage(),
-                style: GoogleFonts.inter(
-                  fontSize: 14.sp,
-                  color: theme.colorScheme.onSurface,
+              child: Container(
+                constraints: BoxConstraints(minHeight: 48.h),
+                decoration: BoxDecoration(
+                  color: fillColor,
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(color: borderColor, width: 1.2),
                 ),
-                decoration: InputDecoration(
-                  hintText: hint,
-                  hintStyle: GoogleFonts.inter(
+                child: TextField(
+                  controller: _inputCtrl,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _sendMessage(),
+                  maxLines: 4,
+                  minLines: 1,
+                  style: GoogleFonts.inter(
                     fontSize: 14.sp,
-                    color: theme.colorScheme.onSurface.withOpacity(0.38),
+                    height: 1.45,
+                    color: theme.colorScheme.onSurface,
                   ),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                      horizontal: 18.w, vertical: 14.h),
+                  decoration: InputDecoration(
+                    hintText: hint,
+                    hintStyle: GoogleFonts.inter(
+                      fontSize: 14.sp,
+                      color: theme.colorScheme.onSurface.withOpacity(0.36),
+                    ),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16.w, vertical: 13.h),
+                    isDense: true,
+                  ),
                 ),
               ),
             ),
+            SizedBox(width: 10.w),
+            // ── Send button ─────────────────────────────────
             GestureDetector(
-              onTap: () => _sendMessage(),
+              onTap: _sendMessage,
               child: Container(
-                margin: EdgeInsets.all(6.w),
-                width: 42.w,
-                height: 42.w,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
+                width: 46.w,
+                height: 46.w,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14.r),
+                  gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [Color(0xFF60A5FA), Color(0xFF3B82F6)],
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF3B82F6).withOpacity(0.35),
+                      blurRadius: 10.r,
+                      offset: Offset(0, 4.h),
+                    ),
+                  ],
                 ),
                 child:
-                    Icon(Icons.send_rounded, color: Colors.white, size: 18.sp),
+                    Icon(Icons.send_rounded, color: Colors.white, size: 20.sp),
               ),
             ),
           ],

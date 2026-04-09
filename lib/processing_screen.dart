@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'result_screen.dart';
 import 'providers/settings_provider.dart';
+import 'providers/document_provider.dart';
+import 'providers/user_provider.dart';
 
 class ProcessingScreen extends StatefulWidget {
   final String docId;
@@ -28,10 +30,10 @@ class _ProcessingScreenState extends State<ProcessingScreen> with TickerProvider
   int _currentStepIndex = 0;
 
   final List<Map<String, dynamic>> _steps = [
-    {'label': 'Scanning document', 'icon': Icons.document_scanner_rounded, 'color': const Color(0xFF6366F1)},
-    {'label': 'Extracting data', 'icon': Icons.data_array_rounded, 'color': const Color(0xFF8B5CF6)},
-    {'label': 'Analyzing authenticity', 'icon': Icons.verified_user_rounded, 'color': const Color(0xFF06B6D4)},
-    {'label': 'Generating report', 'icon': Icons.summarize_rounded, 'color': const Color(0xFF10B981)},
+    {'label': 'SCANNING DOCUMENT', 'icon': Icons.document_scanner_rounded, 'color': const Color(0xFF00FFA3)},
+    {'label': 'EXTRACTING DATA', 'icon': Icons.data_array_rounded, 'color': const Color(0xFF00CC82)},
+    {'label': 'ANALYZING AUTHENTICITY', 'icon': Icons.verified_user_rounded, 'color': const Color(0xFFFFB547)},
+    {'label': 'GENERATING REPORT', 'icon': Icons.summarize_rounded, 'color': const Color(0xFF00FFA3)},
   ];
 
   @override
@@ -68,62 +70,66 @@ class _ProcessingScreenState extends State<ProcessingScreen> with TickerProvider
     _progressController.forward();
 
     try {
-      for (int i = 0; i < _steps.length; i++) {
-        await Future.delayed(const Duration(milliseconds: 900));
-        if (!mounted) return;
-        setState(() => _currentStepIndex = i);
-      }
-
+      // ── Step 0: Scanning document ─────────────────────────────────────────
+      if (!mounted) return;
+      setState(() => _currentStepIndex = 0);
       await Future.delayed(const Duration(milliseconds: 600));
 
-      final int fraudScore = 15 + (DateTime.now().millisecond % 85);
-      final bool isMatch = fraudScore <= 30;
-      final dateStr = DateTime.now().toString().split(' ')[0];
+      // ── Step 1: Extracting data (call real API) ───────────────────────────
+      if (!mounted) return;
+      setState(() => _currentStepIndex = 1);
 
-      final mockResult = {
-        'date': dateStr,
-        'status': isMatch ? 'Match' : 'Mismatch',
-        'fraudScore': fraudScore,
-        'summary': 'Driver License & Passport Verification',
-        'comparisons': [
-          {
-            'field': 'Full Name',
-            'doc1': 'John Doe',
-            'doc2': isMatch ? 'John Doe' : 'Jonathan Doe',
-            'status': isMatch ? 'Match' : 'Partial'
-          },
-          {
-            'field': 'Date of Birth',
-            'doc1': '15-08-1990',
-            'doc2': '15-08-1990',
-            'status': 'Match'
-          },
-          {
-            'field': 'ID Number',
-            'doc1': 'A123456789',
-            'doc2': isMatch ? 'A123456789' : 'B987654321',
-            'status': isMatch ? 'Match' : 'Mismatch'
-          },
-          {
-            'field': 'Address',
-            'doc1': '123 MG Road, Mumbai',
-            'doc2': isMatch ? '123 MG Road, Mumbai' : '456 Nehru Nagar, Delhi',
-            'status': isMatch ? 'Match' : 'Mismatch'
-          },
-        ]
-      };
+      final docProvider = Provider.of<DocumentProvider>(context, listen: false);
+      final Map<String, dynamic>? resultData = await docProvider.uploadDocuments();
+
+      if (!mounted) return;
+
+      // Check if API returned an error
+      if (resultData == null) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = docProvider.uploadError ?? 'Verification failed. Please try again.';
+        });
+        return;
+      }
+
+      // ── Step 2: Analyzing authenticity ───────────────────────────────────
+      setState(() => _currentStepIndex = 2);
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // ── Step 3: Generating report ─────────────────────────────────────────
+      if (!mounted) return;
+      setState(() => _currentStepIndex = 3);
+      await Future.delayed(const Duration(milliseconds: 400));
+
+      // ── Save to history ───────────────────────────────────────────────
+      // Extract image paths into result data so history has independent images
+      final imagePaths = docProvider.selectedFiles.map((f) => f.path).toList();
+      resultData['imagePaths'] = imagePaths;
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
       List<String> historyList = prefs.getStringList('history_results') ?? [];
-      historyList.insert(0, jsonEncode(mockResult));
+      historyList.insert(0, jsonEncode(resultData));
       await prefs.setStringList('history_results', historyList);
+
+      // Clear the temporary selected file state from the global provider 
+      // so other screens don't reuse the wrong images.
+      docProvider.clearAll();
+
+      // ── Increment real-time scan counter & streak ─────────────────────
+      if (mounted) {
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final isReal = resultData['status'] == 'REAL';
+        await userProvider.incrementScanCount(isVerified: isReal);
+      }
 
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (_, __, ___) => ResultScreen(resultData: mockResult),
-          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+          pageBuilder: (_, __, ___) => ResultScreen(resultData: resultData),
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
           transitionDuration: const Duration(milliseconds: 500),
         ),
       );
@@ -131,7 +137,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> with TickerProvider
       if (!mounted) return;
       setState(() {
         _hasError = true;
-        _errorMessage = 'Analysis Failed: Something went wrong.';
+        _errorMessage = 'Analysis Failed: $e';
       });
     }
   }
@@ -141,7 +147,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> with TickerProvider
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: const Color(0xFF07071A),
+        backgroundColor: const Color(0xFF050A0F),
         body: Center(
           child: _hasError ? _buildErrorState() : _buildProcessingState(),
         ),
@@ -298,21 +304,22 @@ class _ProcessingScreenState extends State<ProcessingScreen> with TickerProvider
                 child: Text(
                   tr(_steps[_currentStepIndex]['label'] as String, isHindi),
                   key: ValueKey(_currentStepIndex),
-                  style: GoogleFonts.inter(
-                    fontSize: 22.sp,
-                    fontWeight: FontWeight.w800,
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
-                    letterSpacing: -0.3,
+                    letterSpacing: 2.5,
                   ),
                   textAlign: TextAlign.center,
                 ),
               ),
               SizedBox(height: 8.h),
               Text(
-                'AI is working its magic...',
-                style: GoogleFonts.inter(
-                  fontSize: 14.sp,
-                  color: Colors.white.withOpacity(0.4),
+                'AI FORENSIC ENGINE ACTIVE',
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 10.sp,
+                  color: Colors.white.withOpacity(0.3),
+                  letterSpacing: 2,
                 ),
               ),
               SizedBox(height: 40.h),
@@ -352,15 +359,16 @@ class _ProcessingScreenState extends State<ProcessingScreen> with TickerProvider
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Processing...',
-                            style: GoogleFonts.inter(
-                              fontSize: 12.sp,
+                            'PROCESSING...',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 9.sp,
                               color: Colors.white.withOpacity(0.4),
+                              letterSpacing: 1.5,
                             ),
                           ),
                           Text(
                             '${(_progressController.value * 100).toInt()}%',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.jetBrainsMono(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w700,
                               color: stepColor,
@@ -425,48 +433,48 @@ class _ProcessingScreenState extends State<ProcessingScreen> with TickerProvider
           ),
           SizedBox(height: 28.h),
           Text(
-            tr('Analysis Failed', isHindi),
-            style: GoogleFonts.inter(
-              fontSize: 24.sp,
+            tr('ANALYSIS FAILED', isHindi),
+            style: GoogleFonts.syne(
+              fontSize: 22.sp,
               fontWeight: FontWeight.w800,
               color: Colors.white,
+              letterSpacing: 1,
             ),
           ),
           SizedBox(height: 12.h),
           Text(
             _errorMessage,
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: 14.sp, color: Colors.white.withOpacity(0.45)),
+            style: GoogleFonts.jetBrainsMono(fontSize: 12.sp, color: Colors.white.withOpacity(0.4)),
           ),
           SizedBox(height: 48.h),
           GestureDetector(
             onTap: () => _startAnalysis(),
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 40.w, vertical: 18.h),
+              height: 48.h,
+              width: 200.w,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                ),
-                borderRadius: BorderRadius.circular(20.r),
+                color: const Color(0xFF00FFA3),
+                borderRadius: BorderRadius.circular(8.r),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF6366F1).withOpacity(0.4),
-                    blurRadius: 20.r,
-                    offset: Offset(0, 8.h),
+                    color: const Color(0xFF00FFA3).withOpacity(0.3),
+                    blurRadius: 16, offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.refresh_rounded, color: Colors.white, size: 20.sp),
+                  Icon(Icons.refresh_rounded, size: 16.sp, color: const Color(0xFF050A0F)),
                   SizedBox(width: 8.w),
                   Text(
-                    tr('Retry Analysis', isHindi),
-                    style: GoogleFonts.inter(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                    tr('RETRY', isHindi),
+                    style: GoogleFonts.syne(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF050A0F),
+                      letterSpacing: 1.5,
                     ),
                   ),
                 ],

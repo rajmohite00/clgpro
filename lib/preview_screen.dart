@@ -97,7 +97,7 @@ class PreviewScreen extends StatelessWidget {
                                   SizedBox(width: 10.w),
                                   Expanded(
                                     child: Text(
-                                      '${docProvider.selectedFiles.length} document${docProvider.selectedFiles.length == 1 ? '' : 's'} ready for analysis',
+                                      '${docProvider.selectedFiles.length} ${tr("document(s) ready for analysis", isHindi)}',
                                       style: GoogleFonts.inter(
                                         fontSize: 13.sp,
                                         fontWeight: FontWeight.w600,
@@ -176,7 +176,7 @@ class PreviewScreen extends StatelessWidget {
                                                     size: 40.sp),
                                                 SizedBox(height: 6.h),
                                                 Text(
-                                                  'PDF Document',
+                                                  tr('PDF Document', isHindi),
                                                   style: GoogleFonts.inter(
                                                     fontSize: 12.sp,
                                                     color: const Color(0xFFEF4444)
@@ -245,7 +245,7 @@ class PreviewScreen extends StatelessWidget {
                                                         size: 14.sp),
                                                     SizedBox(width: 4.w),
                                                     Text(
-                                                      'Remove',
+                                                      tr('Remove', isHindi),
                                                       style: GoogleFonts.inter(
                                                         fontSize: 11.sp,
                                                         fontWeight: FontWeight.w600,
@@ -325,27 +325,15 @@ class PreviewScreen extends StatelessWidget {
                           // Continue Button
                           Expanded(
                             child: AnimatedScaleButton(
-                              onTap: () async {
-                                debugPrint('[Upload API] Initiating document upload process...');
-                                final docId = await docProvider.uploadDocuments();
-                                debugPrint('[Upload API Response] docId: $docId');
-
-                                if (docId != null) {
-                                  debugPrint(
-                                      '[Navigation Trigger] Proceeding to ProcessingScreen dynamically.');
-                                  if (!context.mounted) return;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ProcessingScreen(docId: docId),
-                                    ),
-                                  );
-                                } else if (docProvider.uploadError != null) {
-                                  debugPrint(
-                                      '[Upload API Error] Encountered error: ${docProvider.uploadError}');
-                                  if (!context.mounted) return;
-                                  _showError(context, docProvider.uploadError!);
-                                }
+                              onTap: () {
+                                // Navigate to ProcessingScreen — the API call
+                                // happens inside ProcessingScreen._startAnalysis()
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ProcessingScreen(docId: ''),
+                                  ),
+                                );
                               },
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: 16.h),
@@ -427,7 +415,7 @@ class PreviewScreen extends StatelessWidget {
             ),
             SizedBox(height: 8.h),
             Text(
-              'Please wait, this may take a moment',
+              tr('Please wait, this may take a moment', isHindi),
               style: GoogleFonts.inter(color: textDimColor, fontSize: 13.sp),
               textAlign: TextAlign.center,
             ),

@@ -4,7 +4,22 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/settings_provider.dart';
+
 import 'utils/animations.dart';
+
+// Preset accent colors
+const _accentColors = [
+  Color(0xFF3B82F6), // Blue (default)
+  Color(0xFF6366F1), // Indigo
+  Color(0xFF8B5CF6), // Purple
+  Color(0xFFEC4899), // Pink
+  Color(0xFFEF4444), // Red
+  Color(0xFFF59E0B), // Amber
+  Color(0xFF10B981), // Emerald
+  Color(0xFF06B6D4), // Cyan
+  Color(0xFF0EA5E9), // Sky
+  Color(0xFF14B8A6), // Teal
+];
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -21,16 +36,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final bgColor = isDark ? AppTheme.primary : AppTheme.neutral;
-    final cardColor = isDark ? AppTheme.surfaceDark : Colors.white;
-    final textColor = isDark ? Colors.white : AppTheme.textPrimary;
-    final mutedColor = isDark ? Colors.white54 : AppTheme.textSecondary;
-    final borderColor = isDark ? AppTheme.borderDark : AppTheme.borderLight;
+    final bgColor = isDark ? AppTheme.ink : AppTheme.lightBg;
+    final cardColor = isDark ? AppTheme.inkMid : Colors.white;
+    final textColor = isDark ? AppTheme.textPrimary : AppTheme.lightText;
+    final mutedColor = isDark ? AppTheme.textSecondary : AppTheme.lightTextSub;
+    final borderColor = isDark ? AppTheme.borderLight : AppTheme.lightBorder;
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: isDark ? AppTheme.primary : Colors.white,
+        backgroundColor: isDark ? AppTheme.ink : Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         title: Text(
@@ -45,7 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           icon: Container(
             padding: EdgeInsets.all(8.w),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withOpacity(0.08) : AppTheme.neutral,
+              color: isDark ? Colors.white.withOpacity(0.08) : AppTheme.lightBorder.withOpacity(0.3),
               borderRadius: BorderRadius.circular(10.r),
               border: Border.all(color: borderColor),
             ),
@@ -55,10 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(1.h),
-          child: Divider(
-            height: 1,
-            color: borderColor,
-          ),
+          child: Divider(height: 1, color: borderColor),
         ),
       ),
       body: SafeArea(
@@ -69,7 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── Preferences ────────────────────────────────────────────
             StaggeredListItem(
               index: 0,
-              child: _sectionHeader('PREFERENCES', AppTheme.secondary),
+              child: _sectionHeader('PREFERENCES', AppTheme.jade),
             ),
             SizedBox(height: 12.h),
 
@@ -81,7 +93,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: settings.isHindi,
                 onChanged: (val) => settings.toggleLanguage(val),
                 icon: Icons.language_rounded,
-                iconColor: AppTheme.secondary,
+                iconColor: AppTheme.jade,
                 cardColor: cardColor,
                 textColor: textColor,
                 mutedColor: mutedColor,
@@ -127,20 +139,109 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             SizedBox(height: 10.h),
 
+            SizedBox(height: 28.h),
+
+            // ── Appearance ──────────────────────────────────────────────
             StaggeredListItem(
-              index: 4,
-              child: _buildSwitchTile(
-                title: tr('Privacy Mode', settings.isHindi),
-                subtitle: tr('Hide sensitive data on-screen', settings.isHindi),
-                value: settings.privacyMode,
-                onChanged: (val) => settings.togglePrivacyMode(val),
-                icon: Icons.privacy_tip_rounded,
-                iconColor: const Color(0xFF8B5CF6),
-                cardColor: cardColor,
-                textColor: textColor,
-                mutedColor: mutedColor,
-                borderColor: borderColor,
-                isDark: isDark,
+              index: 5,
+              child: _sectionHeader('APPEARANCE', AppTheme.jade),
+            ),
+            SizedBox(height: 12.h),
+
+            // Accent Color Picker
+            StaggeredListItem(
+              index: 6,
+              child: Container(
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(color: borderColor),
+                  boxShadow: isDark
+                      ? []
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 8.r,
+                            offset: Offset(0, 2.h),
+                          ),
+                        ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10.w),
+                          decoration: BoxDecoration(
+                            color: themeProvider.accentColor.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Icon(Icons.palette_rounded,
+                              color: themeProvider.accentColor, size: 18.sp),
+                        ),
+                        SizedBox(width: 14.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(tr('Accent Color', settings.isHindi),
+                                  style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700,
+                                      color: textColor,
+                                      fontSize: 14.sp)),
+                              SizedBox(height: 2.h),
+                              Text(tr('Personalize your app color', settings.isHindi),
+                                  style: GoogleFonts.inter(fontSize: 12.sp, color: mutedColor)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    Wrap(
+                      spacing: 10.w,
+                      runSpacing: 10.h,
+                      children: _accentColors.map((color) {
+                        final isSelected = themeProvider.accentColor.value == color.value;
+                        return GestureDetector(
+                          onTap: () {
+                            themeProvider.setAccentColor(color);
+                            settings.setAccentColor(color);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 36.w,
+                            height: 36.w,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: isSelected
+                                  ? Border.all(
+                                      color: isDark ? AppTheme.jade : AppTheme.inkLight,
+                                      width: 3,
+                                    )
+                                  : null,
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: color.withOpacity(0.5),
+                                        blurRadius: 8.r,
+                                        spreadRadius: 1,
+                                      )
+                                    ]
+                                  : [],
+                            ),
+                            child: isSelected
+                                ? Icon(Icons.check_rounded, color: Colors.white, size: 18.sp)
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -148,13 +249,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // ── Data Management ────────────────────────────────────────
             StaggeredListItem(
-              index: 5,
+              index: 9,
               child: _sectionHeader('DATA MANAGEMENT', AppTheme.error),
             ),
             SizedBox(height: 12.h),
 
             StaggeredListItem(
-              index: 6,
+              index: 10,
               child: AnimatedScaleButton(
                 onTap: () async {
                   final confirm = await showDialog<bool>(
@@ -162,7 +263,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     builder: (ctx) => AlertDialog(
                       backgroundColor: cardColor,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-                      title: Text('Clear History?',
+                      title: Text(tr('Clear History?', settings.isHindi),
                           style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: textColor)),
                       content: Text(
                           'This cannot be undone. All local scan records will be deleted.',
@@ -178,7 +279,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             backgroundColor: AppTheme.error,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
                           ),
-                          child: Text('Delete',
+                          child: Text(tr('Delete', settings.isHindi),
                               style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
                         ),
                       ],
@@ -188,7 +289,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     await settings.clearHistory();
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('History cleared.', style: GoogleFonts.inter(color: Colors.white)),
+                      content: Text(tr('History cleared.', settings.isHindi), style: GoogleFonts.inter(color: Colors.white)),
                       backgroundColor: AppTheme.success,
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
@@ -238,18 +339,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // ── About ──────────────────────────────────────────────────
             StaggeredListItem(
-              index: 7,
-              child: _sectionHeader('ABOUT', AppTheme.secondary),
+              index: 11,
+              child: _sectionHeader('ABOUT', AppTheme.jade),
             ),
             SizedBox(height: 12.h),
 
             StaggeredListItem(
-              index: 8,
+              index: 12,
               child: _buildInfoTile(
                 title: tr('Data Privacy Policy', settings.isHindi),
                 subtitle: 'How we secure your documents',
                 icon: Icons.privacy_tip_rounded,
-                iconColor: AppTheme.secondary,
+                iconColor: AppTheme.jade,
                 cardColor: cardColor,
                 textColor: textColor,
                 mutedColor: mutedColor,
@@ -260,7 +361,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SizedBox(height: 10.h),
 
             StaggeredListItem(
-              index: 9,
+              index: 13,
               child: _buildInfoTile(
                 title: tr('Terms of Service', settings.isHindi),
                 icon: Icons.description_rounded,
@@ -275,10 +376,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SizedBox(height: 10.h),
 
             StaggeredListItem(
-              index: 10,
+              index: 14,
               child: _buildInfoTile(
                 title: tr('Application Version', settings.isHindi),
-                subtitle: 'v1.1.0',
+                subtitle: 'v1.2.0',
                 icon: Icons.info_rounded,
                 iconColor: AppTheme.success,
                 cardColor: cardColor,
@@ -293,26 +394,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // ── Footer ─────────────────────────────────────────────────
             StaggeredListItem(
-              index: 11,
+              index: 15,
               child: Column(
                 children: [
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
                     decoration: BoxDecoration(
-                      color: AppTheme.secondary.withOpacity(0.08),
+                      color: AppTheme.jade.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.document_scanner_rounded, size: 14.sp, color: AppTheme.secondary),
+                        Icon(Icons.document_scanner_rounded, size: 14.sp, color: AppTheme.jade),
                         SizedBox(width: 6.w),
                         Text(
                           'Smart Document Detective',
                           style: GoogleFonts.inter(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
-                            color: AppTheme.secondary,
+                            color: AppTheme.jade,
                           ),
                         ),
                       ],

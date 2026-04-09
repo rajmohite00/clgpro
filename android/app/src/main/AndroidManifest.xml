@@ -1,8 +1,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ─── Permissions ─────────────────────────────────────────────────── -->
+    <!-- Required: API calls to backend server -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Required: Camera document capture -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Required: Reading images from gallery -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+
     <application
         android:label="projectclg"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/launcher_icon"
+        android:usesCleartextTraffic="true">
+        <!-- ↑ Allows HTTP (not just HTTPS) — needed for local backend at http://10.132.127.43:5000 -->
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -31,10 +44,10 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
+
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
-
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
         <intent>

@@ -4,11 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SettingsProvider extends ChangeNotifier {
   bool _isHindi = false;
   bool _notificationsEnabled = true;
-  bool _privacyMode = false;
+  Color _accentColor = const Color(0xFF3B82F6);
 
-  bool get isHindi => _isHindi;
-  bool get notificationsEnabled => _notificationsEnabled;
-  bool get privacyMode => _privacyMode;
+  bool  get isHindi              => _isHindi;
+  bool  get notificationsEnabled => _notificationsEnabled;
+  Color get accentColor          => _accentColor;
 
   SettingsProvider() {
     _loadSettings();
@@ -18,7 +18,8 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _isHindi = prefs.getBool('isHindi') ?? false;
     _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
-    _privacyMode = prefs.getBool('privacyMode') ?? false;
+    final colorValue = prefs.getInt('accentColor');
+    if (colorValue != null) _accentColor = Color(colorValue);
     notifyListeners();
   }
 
@@ -36,17 +37,17 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> togglePrivacyMode(bool val) async {
-    _privacyMode = val;
+  Future<void> setAccentColor(Color color) async {
+    _accentColor = color;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('privacyMode', val);
+    await prefs.setInt('accentColor', color.value);
     notifyListeners();
   }
 
   Future<void> clearHistory() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('history');
-    // Notification to update listeners or history lists can happen here
+    await prefs.remove('history_results');
+    await prefs.remove('bookmarked_results');
     notifyListeners();
   }
 }
@@ -120,6 +121,7 @@ String tr(String text, bool isHindi) {
 
     // Result Screen
     'Analysis Report': 'स्कैन रिपोर्ट',
+    'Fraud Analysis Report': 'धोखाधड़ी विश्लेषण',
     'Documents Match': 'डॉक्यूमेंट मैच हो गए !',
     'Mismatch Detected': 'डॉक्यूमेंट में गलती मिली',
     'All verified fields align properly.': 'सारी जानकारी सही से मिल गई है।',
@@ -207,6 +209,64 @@ String tr(String text, bool isHindi) {
     'Good Evening': 'शुभ संध्या',
     'Ready to scan a document?': 'क्या आप एक डॉक्यूमेंट स्कैन करने के लिए तैयार हैं?',
     'Scanned': 'स्कैन किए',
+    'Analytics': 'विश्लेषण',
+    'Streak': 'स्ट्रीक',
+    'days': 'दिन',
+    'Switch between English and Hindi': 'अंग्रेज़ी और हिंदी में बदलें',
+    'Toggle dark and light themes': 'डार्क और लाइट थीम बदलें',
+    'Alert when analysis finishes': 'स्कैन खत्म होने पर अलर्ट',
+    'Accent Color': 'रंग चुनें',
+    'Personalize your app color': 'अपना पसंदीदा रंग चुनें',
+    'Permanently delete scan history': 'स्कैन हिस्ट्री हमेशा के लिए मिटाएं',
+    'Bookmarked': 'बुकमार्क',
+    'All': 'सभी',
+    'Export CSV': 'CSV डाउनलोड',
+    'Add Note': 'नोट जोड़ें',
+    'Note saved': 'नोट सेव हो गया',
+    'Copied!': 'कॉपी हो गया!',
+    'Rate Us': 'रेटिंग दें',
+    'Enjoying the app?': 'ऐप अच्छा लग रहा है?',
+    'Day Streak': 'दिन की स्ट्रीक',
+    
+    // Additional translations
+    'Welcome back to DocVerify': 'DocVerify में आपकी वापसी का स्वागत है',
+    'Total Scans': 'कुल स्कैन',
+    'No scans yet. Upload a document to begin.': 'अभी तक कोई स्कैन नहीं। शुरू करने के लिए दस्तावेज़ अपलोड करें।',
+    'Help us improve by leaving a rating.': 'रेटिंग देकर ऐप को बेहतर बनाने में हमारी मदद करें।',
+    'Later': 'बाद में',
+    'Verify a Document': 'दस्तावेज़ की जांच करें',
+    'Upload and check document authenticity': 'अपलोड करें और असली-नकली चेक करें',
+    'Record deleted': 'रिकॉर्ड मिटा दिया गया',
+    'Add a personal note to this scan record': 'इस स्कैन रिपोर्ट के लिए एक नोट लिखें',
+    'Save Note': 'नोट सेव करें',
+    'Delete': 'डिलीट करें',
+    'Share Result': 'रिजल्ट शेयर करें',
+    'Delete record?': 'रिकॉर्ड मिटाएं?',
+    'This cannot be undone.': 'इसे वापस नहीं लाया जा सकता।',
+    'Export PDF': 'PDF डाउनलोड करें',
+    'Summary': 'संक्षेप',
+    'Risk Score': 'जोखिम स्कोर',
+    'EXTRACTED DATA': 'निकाला गया डेटा',
+    'PDF Report': 'PDF रिपोर्ट',
+    'Disable App Lock': 'ऐप लॉक बंद करें',
+    'Are you sure you want to remove the PIN lock?': 'क्या आप वाकई PIN लॉक हटाना चाहते हैं?',
+    'Disable': 'बंद करें',
+    'App Lock enabled!': 'ऐप लॉक चालू हो गया!',
+    'Clear History?': 'हिस्ट्री मिटाएं?',
+    'History cleared.': 'हिस्ट्री मिटा दी गई।',
+    'Genuine vs Fraudulent': 'असली बनाम नकली',
+    'Genuine': 'असली',
+    'Fraudulent': 'नकली',
+    'No scans yet — run your first analysis to see data here.': 'कोई स्कैन नहीं — डेटा देखने के लिए अपना पहला स्कैन चलाएं।',
+    'Scans This Week': 'इस हफ़्ते के स्कैन',
+    'last 7 days': 'पिछले 7 दिन',
+    'No recent scans': 'हाल में कोई स्कैन नहीं',
+    'Document Types Scanned': 'स्कैन किए गए दस्तावेज़ों के प्रकार',
+    'Hi': 'नमस्ते',
+    'document(s) ready for analysis': 'दस्तावेज़ स्कैन के लिए तैयार',
+    'PDF Document': 'PDF दस्तावेज़',
+    'Remove': 'हटाएं',
+    'Please wait, this may take a moment': 'कृपया प्रतीक्षा करें, इसमें थोड़ा समय लग सकता है',
   };
 
   return map[text] ?? text;
