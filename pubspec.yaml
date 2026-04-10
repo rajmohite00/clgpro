@@ -25,6 +25,7 @@ dependencies:
   share_plus: ^12.0.1
   syncfusion_flutter_pdf: ^33.1.47
   flutter_dotenv: ^6.0.0
+  audioplayers: ^6.6.0
 
 dev_dependencies:
   flutter_test:

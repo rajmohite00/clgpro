@@ -5,10 +5,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../providers/settings_provider.dart';
 
@@ -19,7 +22,15 @@ class _ChatMessage {
   final String text;
   final bool isUser;
   final bool isPdfResult;
-  _ChatMessage({required this.text, required this.isUser, this.isPdfResult = false});
+  final bool isVoiceResult;
+  final List<String>? sources;
+  _ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.isPdfResult = false,
+    this.isVoiceResult = false,
+    this.sources,
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -132,6 +143,11 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
   // ── LOCAL LLAMA 3 STATE ──────────────────────────────────────
   final List<Map<String, String>> _llamaHistory = [];
 
+  // ── VOICE AGENT STATE ────────────────────────────────────────
+  bool _isVoiceAgentMode = false;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  String _apiBaseUrl = 'http://10.0.2.2:8000'; // Default for Android Emulator
+
   void _initLlama() {
     final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
     final langInstruction = isHindi
@@ -163,8 +179,8 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
       final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
       _addBotMessage(
         isHindi
-          ? "Namaste! 😊 Main aapki madad ke liye hoon. Aap PDF ya image upload kar sakte hain summary ke liye (📎 tap karein), ya mujhse kuch bhi puch sakte hain."
-          : "Hi! I'm your AI assistant 😊 I can answer questions, or you can click the 📎 icon to upload a PDF or Image and I will summarize it for you in real-time.",
+          ? "Namaste! 😊 Main aapki madad ke liye hoon. Aap PDF upload kar sakte hain, ya 🎙️ tap kar ke Voice Knowledge Base mode use kar sakte hain."
+          : "Hi! I'm your AI assistant 😊 I can answer questions, summarize PDFs, or you can tap 🎙️ to use the Voice RAG Knowledge Base.",
       );
     });
   }
@@ -193,13 +209,77 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
     _sheetCtrl.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
-  void _addBotMessage(String text, {bool isPdfResult = false}) {
+  void _addBotMessage(String text, {bool isPdfResult = false, bool isVoiceResult = false, List<String>? sources}) {
     if (!mounted) return;
-    setState(() => _messages.add(_ChatMessage(text: text, isUser: false, isPdfResult: isPdfResult)));
+    setState(() => _messages.add(_ChatMessage(text: text, isUser: false, isPdfResult: isPdfResult, isVoiceResult: isVoiceResult, sources: sources)));
     _scrollToBottom();
+  }
+
+  Future<void> _playAudio(String base64Data) async {
+    try {
+      final bytes = base64Decode(base64Data);
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/response_${DateTime.now().millisecondsSinceEpoch}.mp3');
+      await file.writeAsBytes(bytes);
+      await _audioPlayer.play(DeviceFileSource(file.path));
+    } catch (_) {}
+  }
+
+  void _openVoiceSettings() {
+    final urlCtrl = TextEditingController(text: _apiBaseUrl);
+    bool localToggle = _isVoiceAgentMode;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+          title: Text('Voice RAG System', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16.sp)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile.adaptive(
+                title: Text('Enable Voice Mode', style: GoogleFonts.inter(fontSize: 14.sp)),
+                value: localToggle,
+                activeThumbColor: const Color(0xFF6366F1),
+                activeTrackColor: const Color(0xFF6366F1).withOpacity(0.4),
+                onChanged: (v) => setD(() => localToggle = v),
+              ),
+              if (localToggle) ...[
+                SizedBox(height: 10.h),
+                TextField(
+                  controller: urlCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Backend URL',
+                    hintText: 'http://10.0.2.2:8000',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _isVoiceAgentMode = localToggle;
+                  _apiBaseUrl = urlCtrl.text.trim();
+                });
+                Navigator.pop(ctx);
+                if (_isVoiceAgentMode) _addBotMessage('🎙️ Voice mode enabled! Type or ask questions to search the vector database.', isVoiceResult: true);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _sendMessage({String? override}) async {
@@ -213,6 +293,36 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     });
     _scrollToBottom();
     _inputCtrl.clear();
+
+    if (_isVoiceAgentMode) {
+      try {
+        final response = await http.post(
+          Uri.parse('$_apiBaseUrl/api/ask'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({"text": text}),
+        );
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final answer = data['answer'] ?? "No answer.";
+          final sources = List<String>.from(data['sources'] ?? []);
+          final b64Audio = data['audio_base64'] ?? "";
+          
+          setState(() => _isTyping = false);
+          _addBotMessage(answer, isVoiceResult: true, sources: sources);
+          
+          if (b64Audio.isNotEmpty) {
+            await _playAudio(b64Audio);
+          }
+        } else {
+          setState(() => _isTyping = false);
+          _addBotMessage("🚨 Backend Error: ${response.statusCode}");
+        }
+      } catch (e) {
+        setState(() => _isTyping = false);
+        _addBotMessage("🚨 Could not reach Python Voice Backend.\nMake sure $_apiBaseUrl is running.");
+      }
+      return;
+    }
 
     _llamaHistory.add({"role": "user", "content": text});
 
@@ -427,7 +537,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isHindi ? 'AI सहायक' : 'AI Assistant (Groq Cloud Llama 3)',
+                  _isVoiceAgentMode ? 'RAG Voice Agent 🎙️' : (isHindi ? 'AI सहायक' : 'AI Assistant (Groq Cloud Llama 3)'),
                   style: GoogleFonts.inter(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
@@ -447,7 +557,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
                       ),
                     ),
                     Text(
-                      subtitle,
+                      _isVoiceAgentMode ? 'FastAPI Cloud Vector Backend' : subtitle,
                       style: GoogleFonts.inter(
                         fontSize: 11.sp,
                         color: theme.colorScheme.onSurface.withOpacity(0.45),
@@ -456,6 +566,22 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
                   ],
                 ),
               ],
+            ),
+          ),
+          GestureDetector(
+            onTap: _openVoiceSettings,
+            child: Container(
+              margin: EdgeInsets.only(right: 8.w),
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: _isVoiceAgentMode ? const Color(0xFF6366F1).withOpacity(0.15) : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _isVoiceAgentMode ? Icons.headset_mic_rounded : Icons.headset_off_rounded,
+                color: _isVoiceAgentMode ? const Color(0xFF6366F1) : theme.colorScheme.onSurface.withOpacity(0.38),
+                size: 22.sp,
+              ),
             ),
           ),
           IconButton(
@@ -527,12 +653,15 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
       ),
       child: Align(
         alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          margin: EdgeInsets.only(
-            bottom: 12.h,
-            left: isUser ? 52.w : 0,
-            right: isUser ? 0 : 52.w,
-          ),
+        child: Column(
+          crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Container(
+              margin: EdgeInsets.only(
+                bottom: 12.h,
+                left: isUser ? 52.w : 0,
+                right: isUser ? 0 : 52.w,
+              ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -565,7 +694,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
                       bottomLeft: Radius.circular(isUser ? 18.r : 4.r),
                       bottomRight: Radius.circular(isUser ? 4.r : 18.r),
                     ),
-                    border: msg.isPdfResult ? Border.all(color: const Color(0xFF60A5FA), width: 1.5) : null,
+                    border: msg.isPdfResult ? Border.all(color: const Color(0xFF60A5FA), width: 1.5) : msg.isVoiceResult ? Border.all(color: const Color(0xFF6366F1), width: 1.5) : null,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.06),
@@ -588,7 +717,25 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
             ],
           ),
         ),
-      ),
+        if (!isUser && msg.sources != null && msg.sources!.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(left: 40.w, top: 2.h, bottom: 8.h),
+            child: Wrap(
+              spacing: 4.w,
+              runSpacing: 4.h,
+              children: msg.sources!.map((s) => Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.3)),
+                ),
+                child: Text('📄 $s', style: GoogleFonts.inter(fontSize: 10.sp, color: const Color(0xFF6366F1), fontWeight: FontWeight.bold)),
+              )).toList(),
+            ),
+          ),
+      ]),
+    ),
     );
   }
 
@@ -676,20 +823,20 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
                 height: 46.w,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14.r),
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF60A5FA), Color(0xFF3B82F6)],
+                    colors: _isVoiceAgentMode ? [const Color(0xFF6366F1), const Color(0xFF8B5CF6)] : [const Color(0xFF60A5FA), const Color(0xFF3B82F6)],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF3B82F6).withOpacity(0.35),
+                      color: (_isVoiceAgentMode ? const Color(0xFF6366F1) : const Color(0xFF3B82F6)).withOpacity(0.35),
                       blurRadius: 10.r,
                       offset: Offset(0, 4.h),
                     ),
                   ],
                 ),
-                child: Icon(Icons.send_rounded, color: Colors.white, size: 20.sp),
+                child: Icon(_isVoiceAgentMode ? Icons.record_voice_over_rounded : Icons.send_rounded, color: Colors.white, size: 20.sp),
               ),
             ),
           ],
