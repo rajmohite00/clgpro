@@ -13,16 +13,14 @@ from typing import Optional
 import requests
 import numpy as np
 
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import (
-    Distance,
-    VectorParams,
-    PointStruct,
-    Filter,
-    FieldCondition,
-    MatchValue,
-)
-from sentence_transformers import SentenceTransformer
+import uuid
+import re
+import logging
+from typing import Optional
+import requests
+import numpy as np
+
+logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -51,17 +49,19 @@ class RAGEngine:
         self.qdrant_api_key = qdrant_api_key
 
         # Qdrant cloud client
+        from qdrant_client import QdrantClient
         self.qd = QdrantClient(url=qdrant_url, api_key=qdrant_api_key)
 
         # Embedding model (small, ~90 MB, runs on CPU in seconds)
-        self._embedder: Optional[SentenceTransformer] = None
+        self._embedder = None
 
         # Track indexed doc names
         self.indexed_docs: list[str] = []
 
     # ── lazy-load embedder ────────────────────────────────────
-    def _get_embedder(self) -> SentenceTransformer:
+    def _get_embedder(self):
         if self._embedder is None:
+            from sentence_transformers import SentenceTransformer
             logger.info("Loading embedding model %s …", EMBED_MODEL)
             self._embedder = SentenceTransformer(EMBED_MODEL)
         return self._embedder
@@ -75,6 +75,7 @@ class RAGEngine:
     # ── Qdrant collection bootstrap ───────────────────────────
     def ensure_collection(self) -> None:
         """Create Qdrant collection if it does not exist yet."""
+        from qdrant_client.http.models import VectorParams, Distance
         existing = [c.name for c in self.qd.get_collections().collections]
         if COLLECTION not in existing:
             self.qd.create_collection(
@@ -155,6 +156,7 @@ class RAGEngine:
 
         vectors = self.embed(chunks)
 
+        from qdrant_client.http.models import PointStruct
         points = [
             PointStruct(
                 id=str(uuid.uuid4()),
