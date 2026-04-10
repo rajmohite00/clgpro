@@ -15,7 +15,11 @@ from voice_service import text_to_speech
 
 load_dotenv()
 
+print("🚀 Starting Voice RAG API...")
+
 app = FastAPI(title="Voice RAG API")
+print("✅ FastAPI app initialized")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
