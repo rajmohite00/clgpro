@@ -447,9 +447,10 @@ class PdfReportGenerator {
       ],
     ));
 
-    await Printing.layoutPdf(
-      onLayout: (_) async => pdf.save(),
-      name: 'DocVerify_Report_$date.pdf',
+    final bytes = await pdf.save();
+    await Printing.sharePdf(
+      bytes: bytes,
+      filename: 'DocVerify_Report_$date.pdf',
     );
   }
 
