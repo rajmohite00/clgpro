@@ -10,8 +10,6 @@ import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../providers/settings_provider.dart';
 
@@ -22,13 +20,11 @@ class _ChatMessage {
   final String text;
   final bool isUser;
   final bool isPdfResult;
-  final bool isVoiceResult;
   final List<String>? sources;
   _ChatMessage({
     required this.text,
     required this.isUser,
     this.isPdfResult = false,
-    this.isVoiceResult = false,
     this.sources,
   });
 }
@@ -172,6 +168,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
       if (!mounted || _greetingSent) return;
       _greetingSent = true;
       final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
+      _addBotMessage(
         isHindi
           ? "Namaste! 😊 Main aapki madad ke liye hoon. Aap PDF upload kar sakte hain ya kuch bhi sawal puch sakte hain."
           : "Hi! I'm your AI assistant 😊 I can answer questions or summarize PDFs.",
@@ -199,6 +196,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
   }
 
   @override
+  void dispose() {
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
     _sheetCtrl.dispose();
@@ -436,7 +434,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isVoiceAgentMode ? 'RAG Voice Agent 🎙️' : (isHindi ? 'AI सहायक' : 'AI Assistant (Groq Cloud Llama 3)'),
+                  isHindi ? 'AI सहायक' : 'AI Assistant (Groq Cloud Llama 3)',
                   style: GoogleFonts.inter(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
@@ -456,7 +454,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
                       ),
                     ),
                     Text(
-                      _isVoiceAgentMode ? 'FastAPI Cloud Vector Backend' : subtitle,
+                      subtitle,
                       style: GoogleFonts.inter(
                         fontSize: 11.sp,
                         color: theme.colorScheme.onSurface.withOpacity(0.45),
@@ -465,22 +463,6 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
                   ],
                 ),
               ],
-            ),
-          ),
-          GestureDetector(
-            onTap: _openVoiceSettings,
-            child: Container(
-              margin: EdgeInsets.only(right: 8.w),
-              padding: EdgeInsets.all(8.w),
-              decoration: BoxDecoration(
-                color: _isVoiceAgentMode ? const Color(0xFF6366F1).withOpacity(0.15) : Colors.transparent,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _isVoiceAgentMode ? Icons.headset_mic_rounded : Icons.headset_off_rounded,
-                color: _isVoiceAgentMode ? const Color(0xFF6366F1) : theme.colorScheme.onSurface.withOpacity(0.38),
-                size: 22.sp,
-              ),
             ),
           ),
           IconButton(
@@ -593,7 +575,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
                       bottomLeft: Radius.circular(isUser ? 18.r : 4.r),
                       bottomRight: Radius.circular(isUser ? 4.r : 18.r),
                     ),
-                    border: msg.isPdfResult ? Border.all(color: const Color(0xFF60A5FA), width: 1.5) : msg.isVoiceResult ? Border.all(color: const Color(0xFF6366F1), width: 1.5) : null,
+                    border: msg.isPdfResult ? Border.all(color: const Color(0xFF60A5FA), width: 1.5) : null,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.06),
@@ -725,17 +707,17 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: _isVoiceAgentMode ? [const Color(0xFF6366F1), const Color(0xFF8B5CF6)] : [const Color(0xFF60A5FA), const Color(0xFF3B82F6)],
+                    colors: [const Color(0xFF60A5FA), const Color(0xFF3B82F6)],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: (_isVoiceAgentMode ? const Color(0xFF6366F1) : const Color(0xFF3B82F6)).withOpacity(0.35),
+                      color: const Color(0xFF3B82F6).withOpacity(0.35),
                       blurRadius: 10.r,
                       offset: Offset(0, 4.h),
                     ),
                   ],
                 ),
-                child: Icon(_isVoiceAgentMode ? Icons.record_voice_over_rounded : Icons.send_rounded, color: Colors.white, size: 20.sp),
+                child: Icon(Icons.send_rounded, color: Colors.white, size: 20.sp),
               ),
             ),
           ],
