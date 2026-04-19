@@ -34,7 +34,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SatyaApiService {
   // ─── ✅ ACTIVE BASE URL — Loaded from .env ──────────────────────────────
-  static final String baseUrl = dotenv.get('BACKEND_URL', fallback: 'https://satya-agent-main.onrender.com');
+  static final String baseUrl = dotenv.get('BACKEND_URL', fallback: 'https://clgpro.onrender.com');
 
   // ─── Other options (uncomment whichever applies, comment out the one above) ─
   // static const String baseUrl = 'http://10.132.127.43:5000';          // Physical device (same WiFi)

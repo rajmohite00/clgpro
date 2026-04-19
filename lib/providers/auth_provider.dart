@@ -27,7 +27,7 @@ class AuthProvider with ChangeNotifier {
   String? get token => _token;
   bool get isLoggedIn => _token != null && _token!.isNotEmpty;
 
-  static final String _baseUrl = dotenv.get('BACKEND_URL', fallback: 'https://satya-agent-main.onrender.com');
+  static final String _baseUrl = dotenv.get('BACKEND_URL', fallback: 'https://clgpro.onrender.com');
   static const Duration _timeout = Duration(seconds: 90);
 
   void _setLoading(bool value) {

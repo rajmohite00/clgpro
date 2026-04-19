@@ -41,7 +41,7 @@ class UserProvider with ChangeNotifier {
   bool get shouldShowRatingPrompt =>
       _totalScans >= 3 && !_hasRated && !_hasPromptedRating;
 
-  static final String _baseUrl = dotenv.get('BACKEND_URL', fallback: 'https://satya-agent-main.onrender.com');
+  static final String _baseUrl = dotenv.get('BACKEND_URL', fallback: 'https://clgpro.onrender.com');
 
   // ── Key helper — every pref is scoped to userId ────────────────────────
   Future<String> _uid(SharedPreferences prefs) async {
