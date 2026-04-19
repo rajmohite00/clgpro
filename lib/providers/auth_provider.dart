@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // ════════════════════════════════════════════════════════════════════════════
 //  AUTH PROVIDER  — Real backend integration
@@ -26,7 +27,7 @@ class AuthProvider with ChangeNotifier {
   String? get token => _token;
   bool get isLoggedIn => _token != null && _token!.isNotEmpty;
 
-  static const String _baseUrl = 'https://antonymous-wynona-dictatingly.ngrok-free.dev';
+  static final String _baseUrl = dotenv.get('BACKEND_URL', fallback: 'https://satya-agent-main.onrender.com');
   static const Duration _timeout = Duration(seconds: 90);
 
   void _setLoading(bool value) {

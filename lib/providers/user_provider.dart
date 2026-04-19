@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // ════════════════════════════════════════════════════════════════════════════
 //  USER PROVIDER  — User-account-scoped data
@@ -40,7 +41,7 @@ class UserProvider with ChangeNotifier {
   bool get shouldShowRatingPrompt =>
       _totalScans >= 3 && !_hasRated && !_hasPromptedRating;
 
-  static const String _baseUrl = 'https://antonymous-wynona-dictatingly.ngrok-free.dev';
+  static final String _baseUrl = dotenv.get('BACKEND_URL', fallback: 'https://satya-agent-main.onrender.com');
 
   // ── Key helper — every pref is scoped to userId ────────────────────────
   Future<String> _uid(SharedPreferences prefs) async {
