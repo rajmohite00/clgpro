@@ -143,11 +143,6 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
   // ── LOCAL LLAMA 3 STATE ──────────────────────────────────────
   final List<Map<String, String>> _llamaHistory = [];
 
-  // ── VOICE AGENT STATE ────────────────────────────────────────
-  bool _isVoiceAgentMode = false;
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  String _apiBaseUrl = 'http://10.0.2.2:8000'; // Default for Android Emulator
-
   void _initLlama() {
     final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
     final langInstruction = isHindi
@@ -177,10 +172,9 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
       if (!mounted || _greetingSent) return;
       _greetingSent = true;
       final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;
-      _addBotMessage(
         isHindi
-          ? "Namaste! 😊 Main aapki madad ke liye hoon. Aap PDF upload kar sakte hain, ya 🎙️ tap kar ke Voice Knowledge Base mode use kar sakte hain."
-          : "Hi! I'm your AI assistant 😊 I can answer questions, summarize PDFs, or you can tap 🎙️ to use the Voice RAG Knowledge Base.",
+          ? "Namaste! 😊 Main aapki madad ke liye hoon. Aap PDF upload kar sakte hain ya kuch bhi sawal puch sakte hain."
+          : "Hi! I'm your AI assistant 😊 I can answer questions or summarize PDFs.",
       );
     });
   }
@@ -205,81 +199,16 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
   }
 
   @override
-  void dispose() {
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
     _sheetCtrl.dispose();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
-  void _addBotMessage(String text, {bool isPdfResult = false, bool isVoiceResult = false, List<String>? sources}) {
+  void _addBotMessage(String text, {bool isPdfResult = false, List<String>? sources}) {
     if (!mounted) return;
-    setState(() => _messages.add(_ChatMessage(text: text, isUser: false, isPdfResult: isPdfResult, isVoiceResult: isVoiceResult, sources: sources)));
+    setState(() => _messages.add(_ChatMessage(text: text, isUser: false, isPdfResult: isPdfResult, sources: sources)));
     _scrollToBottom();
-  }
-
-  Future<void> _playAudio(String base64Data) async {
-    try {
-      final bytes = base64Decode(base64Data);
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/response_${DateTime.now().millisecondsSinceEpoch}.mp3');
-      await file.writeAsBytes(bytes);
-      await _audioPlayer.play(DeviceFileSource(file.path));
-    } catch (_) {}
-  }
-
-  void _openVoiceSettings() {
-    final urlCtrl = TextEditingController(text: _apiBaseUrl);
-    bool localToggle = _isVoiceAgentMode;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setD) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-          title: Text('Voice RAG System', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16.sp)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SwitchListTile.adaptive(
-                title: Text('Enable Voice Mode', style: GoogleFonts.inter(fontSize: 14.sp)),
-                value: localToggle,
-                activeThumbColor: const Color(0xFF6366F1),
-                activeTrackColor: const Color(0xFF6366F1).withOpacity(0.4),
-                onChanged: (v) => setD(() => localToggle = v),
-              ),
-              if (localToggle) ...[
-                SizedBox(height: 10.h),
-                TextField(
-                  controller: urlCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Backend URL',
-                    hintText: 'http://10.0.2.2:8000',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _isVoiceAgentMode = localToggle;
-                  _apiBaseUrl = urlCtrl.text.trim();
-                });
-                Navigator.pop(ctx);
-                if (_isVoiceAgentMode) _addBotMessage('🎙️ Voice mode enabled! Type or ask questions to search the vector database.', isVoiceResult: true);
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Future<void> _sendMessage({String? override}) async {
@@ -293,36 +222,6 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     });
     _scrollToBottom();
     _inputCtrl.clear();
-
-    if (_isVoiceAgentMode) {
-      try {
-        final response = await http.post(
-          Uri.parse('$_apiBaseUrl/api/ask'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({"text": text}),
-        );
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final answer = data['answer'] ?? "No answer.";
-          final sources = List<String>.from(data['sources'] ?? []);
-          final b64Audio = data['audio_base64'] ?? "";
-          
-          setState(() => _isTyping = false);
-          _addBotMessage(answer, isVoiceResult: true, sources: sources);
-          
-          if (b64Audio.isNotEmpty) {
-            await _playAudio(b64Audio);
-          }
-        } else {
-          setState(() => _isTyping = false);
-          _addBotMessage("🚨 Backend Error: ${response.statusCode}");
-        }
-      } catch (e) {
-        setState(() => _isTyping = false);
-        _addBotMessage("🚨 Could not reach Python Voice Backend.\nMake sure $_apiBaseUrl is running.");
-      }
-      return;
-    }
 
     _llamaHistory.add({"role": "user", "content": text});
 

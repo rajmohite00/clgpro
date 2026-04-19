@@ -26,7 +26,7 @@ class AuthProvider with ChangeNotifier {
   String? get token => _token;
   bool get isLoggedIn => _token != null && _token!.isNotEmpty;
 
-  static const String _baseUrl = 'https://satya-agent-main.onrender.com';
+  static const String _baseUrl = 'https://antonymous-wynona-dictatingly.ngrok-free.dev';
   static const Duration _timeout = Duration(seconds: 90);
 
   void _setLoading(bool value) {

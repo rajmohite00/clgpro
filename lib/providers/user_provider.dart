@@ -40,7 +40,7 @@ class UserProvider with ChangeNotifier {
   bool get shouldShowRatingPrompt =>
       _totalScans >= 3 && !_hasRated && !_hasPromptedRating;
 
-  static const String _baseUrl = 'https://satya-agent-main.onrender.com';
+  static const String _baseUrl = 'https://antonymous-wynona-dictatingly.ngrok-free.dev';
 
   // ── Key helper — every pref is scoped to userId ────────────────────────
   Future<String> _uid(SharedPreferences prefs) async {
