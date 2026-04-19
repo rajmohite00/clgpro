@@ -287,6 +287,33 @@ class AuthProvider with ChangeNotifier {
     final tok   = prefs.getString('auth_token');
     if (tok == null || tok.isEmpty) return false;
 
+    // Check if token is expired
+    try {
+      final parts = tok.split('.');
+      if (parts.length != 3) {
+        await logout();
+        return false;
+      }
+      
+      final payloadStr = parts[1];
+      final normalized = base64Url.normalize(payloadStr);
+      final payloadMap = jsonDecode(utf8.decode(base64Url.decode(normalized)));
+      
+      if (payloadMap is Map<String, dynamic> && payloadMap.containsKey('exp')) {
+        final exp = payloadMap['exp'] as int;
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        if (now >= exp) {
+          // Token expired
+          await logout();
+          return false;
+        }
+      }
+    } catch (_) {
+      // If parsing fails, assume invalid token
+      await logout();
+      return false;
+    }
+
     _token     = tok;
     _userId    = prefs.getString('user_id');
     _userEmail = prefs.getString('user_email');

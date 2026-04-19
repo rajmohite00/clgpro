@@ -116,7 +116,7 @@ const processDocument = async (req, res) => {
         // ── 6. Cleanup ────────────────────────────────────────────────────────
         for (const tmpPath of tmpPaths) {
             if (tmpPath && fs.existsSync(tmpPath)) {
-                try { fs.unlinkSync(tmpPath); } catch (_) { /* ignore */ }
+                fs.promises.unlink(tmpPath).catch(() => {});
             }
         }
         if (!KEEP_ON_CLOUD && deleteFile) {

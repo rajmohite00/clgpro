@@ -58,7 +58,7 @@ class SatyaApiService {
     try {
       final res = await http
           .get(Uri.parse('$baseUrl$_healthPath'))
-          .timeout(_timeout);
+          .timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         return body['status'] == 'running';
