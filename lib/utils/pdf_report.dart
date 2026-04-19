@@ -1,6 +1,9 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:file_picker/file_picker.dart';
 
 // ════════════════════════════════════════════════════════════════════════════
 //  Professional PDF Report Generator
@@ -139,8 +142,6 @@ class PdfReportGenerator {
             color: isReal
                 ? const PdfColor.fromInt(0xFFD1FAE5)
                 : const PdfColor.fromInt(0xFFFEE2E2),
-            borderRadius:
-                const pw.BorderRadius.all(pw.Radius.circular(8)),
             border: pw.Border.all(color: overallAccent, width: 1),
           ),
           child: pw.Row(
@@ -286,8 +287,7 @@ class PdfReportGenerator {
                   horizontal: 12, vertical: 8),
               decoration: pw.BoxDecoration(
                 color: _sectionBg,
-                borderRadius:
-                    const pw.BorderRadius.all(pw.Radius.circular(6)),
+                // borderRadius removed because it conflicts with a non-uniform border (left side only)
                 border: pw.Border(
                     left: pw.BorderSide(
                         color: statusAccent, width: 4)),
@@ -430,8 +430,6 @@ class PdfReportGenerator {
           padding: const pw.EdgeInsets.all(10),
           decoration: const pw.BoxDecoration(
             color: PdfColor.fromInt(0xFFF0F9FF),
-            borderRadius:
-                pw.BorderRadius.all(pw.Radius.circular(6)),
             border: pw.Border(
                 left: pw.BorderSide(
                     color: PdfColor.fromInt(0xFF0EA5E9), width: 3)),
@@ -448,10 +446,21 @@ class PdfReportGenerator {
     ));
 
     final bytes = await pdf.save();
-    await Printing.sharePdf(
-      bytes: bytes,
-      filename: 'DocVerify_Report_$date.pdf',
-    );
+
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      // On Windows, layoutPdf opens the system print dialog.
+      // This allows users to select "Microsoft Print to PDF" or "Save as PDF".
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => bytes,
+        name: 'DocVerify_Report_$reportId',
+      );
+    } else {
+      // On Mobile/Web, sharePdf is better
+      await Printing.sharePdf(
+        bytes: bytes,
+        filename: 'DocVerify_Report_$reportId.pdf',
+      );
+    }
   }
 
   static String _p(int n) => n.toString().padLeft(2, '0');

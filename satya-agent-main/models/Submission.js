@@ -1,52 +1,40 @@
-const mongoose = require('mongoose');
+const submissionsMap = new Map();
 
-const submissionSchema = new mongoose.Schema({
-    id: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    applicant: {
-        type: String,
-        default: 'Unknown'
-    },
-    categoryKey: {
-        type: String,
-        required: true
-    },
-    categoryTitle: {
-        type: String,
-        required: true
-    },
-    documents: {
-        type: Array,
-        default: []
-    },
-    detectionResult: {
-        type: Object,
-        default: {}
-    },
-    status: {
-        type: String,
-        enum: ['pending', 'approved', 'rejected'],
-        default: 'pending'
-    },
-    submittedBy: {
-        type: String,
-        required: true
-    },
-    officerNote: {
-        type: String,
-        default: null
-    },
-    decidedBy: {
-        type: String,
-        default: null
-    },
-    decidedAt: {
-        type: Date,
-        default: null
+class Submission {
+    constructor(data) {
+        Object.assign(this, data);
+        if (!this.createdAt) this.createdAt = new Date();
     }
-}, { timestamps: true });
 
-module.exports = mongoose.model('Submission', submissionSchema);
+    static async findOneAndUpdate(query, update, options) {
+        const id = query.id;
+        let sub = submissionsMap.get(id);
+
+        if (!sub && options && options.upsert) {
+            sub = new Submission({ id });
+        } else if (!sub) {
+            return null;
+        }
+
+        const setUpdates = update.$set || {};
+        Object.assign(sub, setUpdates);
+        submissionsMap.set(id, sub);
+        return sub;
+    }
+
+    static async find() {
+        // Return a mock object with a .sort() method to support the route chaining
+        return {
+            sort: () => Array.from(submissionsMap.values()).sort((a, b) => b.createdAt - a.createdAt)
+        };
+    }
+
+    static async findOne(query) {
+        if (query.id) {
+            return submissionsMap.get(query.id) || null;
+        }
+        return null;
+    }
+}
+
+module.exports = Submission;

@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-const mongoose = require('mongoose');
+
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
@@ -116,10 +116,7 @@ app.get('/health', (req, res) => {
 
 // Start Server only if not in Vercel
 if (process.env.VERCEL !== '1') {
-    mongoose.connect(MONGO_URI)
-        .then(() => logger.info(`Connected to MongoDB`))
-        .catch(err => logger.error(`MongoDB connection error: ${err.message}`));
-
+    // Memory-only mode (MongoDB removed for simplicity)
     app.listen(PORT, async () => {
         logger.info(`Server running on http://localhost:${PORT}`);
 

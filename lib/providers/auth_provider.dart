@@ -26,7 +26,7 @@ class AuthProvider with ChangeNotifier {
   String? get token => _token;
   bool get isLoggedIn => _token != null && _token!.isNotEmpty;
 
-  static const String _baseUrl = 'https://satya-agent-main.onrender.com';
+  static const String _baseUrl = 'https://antonymous-wynona-dictatingly.ngrok-free.dev';
   static const Duration _timeout = Duration(seconds: 90);
 
   void _setLoading(bool value) {
@@ -74,7 +74,7 @@ class AuthProvider with ChangeNotifier {
       final res = await http
           .post(
             Uri.parse('$_baseUrl/api/auth/login'),
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true'},
             body: jsonEncode({'email': email.trim(), 'password': password}),
           )
           .timeout(_timeout);
@@ -142,7 +142,7 @@ class AuthProvider with ChangeNotifier {
       final res = await http
           .post(
             Uri.parse('$_baseUrl/api/auth/register'),
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true'},
             body: jsonEncode({
               'name':     name.trim(),
               'email':    email.trim(),
@@ -211,7 +211,7 @@ class AuthProvider with ChangeNotifier {
           .post(
             Uri.parse('$_baseUrl/api/auth/change-password'),
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true',
               'Authorization': 'Bearer $tok',
             },
             body: jsonEncode({

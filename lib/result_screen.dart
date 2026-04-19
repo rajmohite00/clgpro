@@ -99,13 +99,32 @@ class ResultScreen extends StatelessWidget {
 
   // ── PDF ───────────────────────────────────────────────────────────────────
   Future<void> _generatePdf(BuildContext context) async {
-    final summary = resultData['overallSummary'] as String? ?? '';
-    await PdfReportGenerator.generate(
-      docs:        _docs,
-      fraudScore:  _score,
-      status:      _status,
-      summary:     summary,
-    );
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Generating Report PDF...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      final summary = resultData['overallSummary'] as String? ?? '';
+      await PdfReportGenerator.generate(
+        docs:        _docs,
+        fraudScore:  _score,
+        status:      _status,
+        summary:     summary,
+      );
+    } catch (e) {
+      debugPrint('PDF Error: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sorry, could not generate PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════

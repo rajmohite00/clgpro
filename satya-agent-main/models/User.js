@@ -1,34 +1,30 @@
-const mongoose = require('mongoose');
+const crypto = require('crypto');
 
-const userSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-        trim: true,
-        lowercase: true
-    },
-    password: {
-        type: String,
-        required: true
-    },
-    phone: {
-        type: String,
-        default: ''
-    },
-    lastActivityDate: {
-        type: String, // Stored as 'YYYY-MM-DD'
-        default: ''
-    },
-    streakDays: {
-        type: Number,
-        default: 0
+const usersMap = new Map();
+
+class User {
+    constructor(data) {
+        Object.assign(this, data);
+        if (!this._id) this._id = crypto.randomUUID();
     }
-}, { timestamps: true });
 
-module.exports = mongoose.model('User', userSchema);
+    async save() {
+        usersMap.set(this.email, this);
+        return this;
+    }
+
+    static async findOne(query) {
+        if (query.email) {
+            return usersMap.get(query.email) || null;
+        }
+        return null;
+    }
+
+    static async create(data) {
+        const user = new User(data);
+        usersMap.set(user.email, user);
+        return user;
+    }
+}
+
+module.exports = User;

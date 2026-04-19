@@ -33,7 +33,7 @@ import 'package:http_parser/http_parser.dart';
 
 class SatyaApiService {
   // ─── ✅ ACTIVE BASE URL — Render.com Cloud Deployment ────────────────────────
-  static const String baseUrl = 'https://satya-agent-main.onrender.com';
+  static const String baseUrl = 'https://antonymous-wynona-dictatingly.ngrok-free.dev';
 
   // ─── Other options (uncomment whichever applies, comment out the one above) ─
   // static const String baseUrl = 'http://10.132.127.43:5000';          // Physical device (same WiFi)
@@ -57,7 +57,9 @@ class SatyaApiService {
   static Future<bool> checkHealth() async {
     try {
       final res = await http
-          .get(Uri.parse('$baseUrl$_healthPath'))
+          .get(Uri.parse('$baseUrl$_healthPath'), headers: {
+            'ngrok-skip-browser-warning': 'true',
+          })
           .timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -102,6 +104,7 @@ class SatyaApiService {
         'POST',
         Uri.parse('$baseUrl$_detectPath'),
       );
+      req.headers['ngrok-skip-browser-warning'] = 'true';
 
       // IMPORTANT: field name must be exactly "documents"
       // IMPORTANT: contentType must be set — without it multer's fileFilter
