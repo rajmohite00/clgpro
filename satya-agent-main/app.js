@@ -65,6 +65,9 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
 
+// Trust proxies (required for ngrok, Vercel, Render)
+app.set('trust proxy', 1);
+
 // Global Rate Limiter
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes

@@ -33,7 +33,7 @@ import 'package:http_parser/http_parser.dart';
 
 class SatyaApiService {
   // ─── ✅ ACTIVE BASE URL — Render.com Cloud Deployment ────────────────────────
-  static const String baseUrl = 'http://localhost:5000';
+  static const String baseUrl = 'https://satya-agent-main.onrender.com';
 
   // ─── Other options (uncomment whichever applies, comment out the one above) ─
   // static const String baseUrl = 'http://10.132.127.43:5000';          // Physical device (same WiFi)
