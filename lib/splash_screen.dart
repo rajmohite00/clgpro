@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dashboard_screen.dart';
+import 'login_screen.dart';
 import 'onboarding_screen.dart';
 import 'providers/theme_provider.dart';
 import 'widgets/logo_widget.dart';

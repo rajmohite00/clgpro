@@ -48,7 +48,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList('history_results') ?? [];
+    final uid   = prefs.getString('user_id') ?? 'guest';
+    final saved = prefs.getStringList('history_results_$uid') ?? [];
 
     // Reset
     Map<String, int> weekly  = {for (var d in _weekDays) d: 0};

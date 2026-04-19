@@ -180,7 +180,8 @@ class _HomeViewState extends State<_HomeView> with SingleTickerProviderStateMixi
 
   Future<void> _loadRecent() async {
     final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList('history_results') ?? [];
+    final uid   = prefs.getString('user_id') ?? 'guest';
+    final saved = prefs.getStringList('history_results_$uid') ?? [];
     if (mounted) {
       setState(() {
         _recent = saved.take(3)
@@ -200,7 +201,7 @@ class _HomeViewState extends State<_HomeView> with SingleTickerProviderStateMixi
     final settings = Provider.of<SettingsProvider>(context);
     final isHindi  = settings.isHindi;
     final user     = Provider.of<UserProvider>(context);
-    final userName = user.name;
+    final userName = user.name.trim().split(RegExp(r'\s+')).first;
 
     if (user.shouldShowRatingPrompt) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

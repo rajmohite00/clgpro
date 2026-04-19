@@ -3,13 +3,17 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const mongoose = require('mongoose');
+
 const documentRoutes = require('./routes/documentRoutes');
 const submissionRoutes = require('./routes/submissionRoutes');
+const authRoutes = require('./routes/authRoutes');
 const { setupLogger, logger } = require('./utils/logger');
 const { startNgrok } = require('./config/ngrok');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smart-document';
 
 // CORS — Whitelist allowed origins
 const allowedOrigins = [
@@ -64,6 +68,7 @@ setupLogger(app);
 // Routes
 app.use('/api', documentRoutes);
 app.use('/api/submissions', submissionRoutes);
+app.use('/api/auth', authRoutes);
 
 // Detailed Global Error Handler
 app.use((err, req, res, next) => {
@@ -84,6 +89,10 @@ app.get('/health', (req, res) => {
 
 // Start Server only if not in Vercel
 if (process.env.VERCEL !== '1') {
+    mongoose.connect(MONGO_URI)
+        .then(() => logger.info(`Connected to MongoDB`))
+        .catch(err => logger.error(`MongoDB connection error: ${err.message}`));
+
     app.listen(PORT, async () => {
         logger.info(`Server running on http://localhost:${PORT}`);
 

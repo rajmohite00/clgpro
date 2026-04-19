@@ -108,9 +108,11 @@ class _ProcessingScreenState extends State<ProcessingScreen> with TickerProvider
       resultData['imagePaths'] = imagePaths;
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      List<String> historyList = prefs.getStringList('history_results') ?? [];
+      final uid = prefs.getString('user_id') ?? 'guest';
+      final histKey = 'history_results_$uid';
+      List<String> historyList = prefs.getStringList(histKey) ?? [];
       historyList.insert(0, jsonEncode(resultData));
-      await prefs.setStringList('history_results', historyList);
+      await prefs.setStringList(histKey, historyList);
 
       // Clear the temporary selected file state from the global provider 
       // so other screens don't reuse the wrong images.

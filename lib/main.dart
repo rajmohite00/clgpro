@@ -20,17 +20,23 @@ void main() async {
       statusBarIconBrightness: Brightness.light,
     ),
   );
-  runApp(const MyApp());
+
+  // Restore auth session before paint
+  final authProvider = AuthProvider();
+  await authProvider.restoreSession();
+
+  runApp(MyApp(authProvider: authProvider));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final AuthProvider authProvider;
+  const MyApp({super.key, required this.authProvider});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => DocumentProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()..fetchProfile()),

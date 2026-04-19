@@ -45,9 +45,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   // ── Data ops ───────────────────────────────────────────────────────────────
+  Future<String> _historyKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final uid = prefs.getString('user_id') ?? 'guest';
+    return 'history_results_$uid';
+  }
+
   Future<List<Map<String, dynamic>>> _fetch() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw   = prefs.getStringList('history_results') ?? [];
+    final key   = await _historyKey();
+    final raw   = prefs.getStringList(key) ?? [];
     return raw.map((s) => jsonDecode(s) as Map<String, dynamic>).toList();
   }
 
@@ -55,14 +62,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _delete(Map<String, dynamic> item) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw   = (prefs.getStringList('history_results') ?? []).toList();
+    final key   = await _historyKey();
+    final raw   = (prefs.getStringList(key) ?? []).toList();
     raw.removeWhere((s) {
       final m = jsonDecode(s) as Map<String, dynamic>;
       return m['date'] == item['date'] &&
           m['fraudScore'] == item['fraudScore'] &&
           m['summary'] == item['summary'];
     });
-    await prefs.setStringList('history_results', raw);
+    await prefs.setStringList(key, raw);
     _refresh();
     if (mounted) {
       final isHindi = Provider.of<SettingsProvider>(context, listen: false).isHindi;

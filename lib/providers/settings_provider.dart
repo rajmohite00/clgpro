@@ -46,7 +46,9 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> clearHistory() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('history_results');
+    final uid   = prefs.getString('user_id') ?? 'guest';
+    await prefs.remove('history_results_$uid');
+    await prefs.remove('history_results'); // also clear legacy key
     await prefs.remove('bookmarked_results');
     notifyListeners();
   }
