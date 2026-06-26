@@ -67,6 +67,8 @@ class _ChatbotFABState extends State<ChatbotFAB> with SingleTickerProviderStateM
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      // Let the sheet resize itself based on keyboard insets
+      useSafeArea: false,
       builder: (_) => ChangeNotifierProvider.value(
         value: Provider.of<SettingsProvider>(context, listen: false),
         child: _ChatScreen(initialIsHindi: isHindi),
@@ -135,6 +137,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
   bool _isTyping = false;
   bool _greetingSent = false;
   bool _lastIsHindi = false; // tracks language to detect changes
+  double _lastKeyboardHeight = 0; // tracks keyboard to auto-scroll
 
   // ── LOCAL LLAMA 3 STATE ──────────────────────────────────────
   final List<Map<String, String>> _llamaHistory = [];
@@ -193,6 +196,13 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
         ));
       }
     }
+
+    // Auto-scroll when keyboard opens so input stays visible
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    if (keyboardHeight > _lastKeyboardHeight) {
+      _scrollToBottom();
+    }
+    _lastKeyboardHeight = keyboardHeight;
   }
 
   @override
@@ -363,7 +373,15 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     final isHindi = settings.isHindi;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardHeight = mediaQuery.viewInsets.bottom;
+    final screenHeight = mediaQuery.size.height;
+
+    // When keyboard opens, shrink the sheet so the input bar stays visible.
+    // Without keyboard: 84% of screen. With keyboard: fit inside the visible area.
+    final sheetHeight = keyboardHeight > 0
+        ? screenHeight - keyboardHeight - mediaQuery.padding.top
+        : screenHeight * 0.84;
 
     final hintText = isHindi ? 'Kuch puchho...' : 'Ask something...';
     final headerSubtitle = isHindi ? 'Online · intelligent PDF assistant' : 'Online · intelligent PDF assistant';
@@ -374,32 +392,27 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
         position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(_sheetAnim),
         child: child,
       ),
-      // KEY FIX: Padding with viewInsets.bottom pushes the entire sheet
-      // content above the keyboard — the Flutter-idiomatic way.
-      child: Padding(
-        padding: EdgeInsets.only(bottom: keyboardHeight),
-        child: Container(
-          height: MediaQuery.of(context).size.height * 0.84,
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF0F172A) : Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.18),
-                blurRadius: 40,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              _buildHandle(isDark),
-              _buildHeader(isDark, theme, isHindi, headerSubtitle),
-              Divider(height: 1, color: theme.dividerColor.withOpacity(0.08)),
-              _buildMessageList(isDark, theme),
-              _buildInputBar(isDark, theme, hintText),
-            ],
-          ),
+      child: Container(
+        height: sheetHeight,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0F172A) : Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 40,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            _buildHandle(isDark),
+            _buildHeader(isDark, theme, isHindi, headerSubtitle),
+            Divider(height: 1, color: theme.dividerColor.withOpacity(0.08)),
+            _buildMessageList(isDark, theme),
+            _buildInputBar(isDark, theme, hintText),
+          ],
         ),
       ),
     );
