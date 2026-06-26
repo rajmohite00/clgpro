@@ -363,10 +363,17 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     final isHindi = settings.isHindi;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final keyboardHeight = mediaQuery.viewInsets.bottom;
 
     final hintText = isHindi ? 'Kuch puchho...' : 'Ask something...';
     final headerSubtitle = isHindi ? 'Online · intelligent PDF assistant' : 'Online · intelligent PDF assistant';
+
+    // When keyboard is open, shrink the sheet so the input bar stays visible
+    final sheetHeight = keyboardHeight > 0
+        ? screenHeight - keyboardHeight
+        : screenHeight * 0.84;
 
     return AnimatedBuilder(
       animation: _sheetAnim,
@@ -375,7 +382,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
         child: child,
       ),
       child: Container(
-        height: screenHeight * 0.84,
+        height: sheetHeight,
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF0F172A) : Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
@@ -393,7 +400,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
             _buildHeader(isDark, theme, isHindi, headerSubtitle),
             Divider(height: 1, color: theme.dividerColor.withOpacity(0.08)),
             _buildMessageList(isDark, theme),
-            _buildInputBar(isDark, theme, hintText),
+            _buildInputBar(isDark, theme, hintText, keyboardOpen: keyboardHeight > 0),
           ],
         ),
       ),
@@ -635,14 +642,16 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     );
   }
 
-  Widget _buildInputBar(bool isDark, ThemeData theme, String hint) {
+  Widget _buildInputBar(bool isDark, ThemeData theme, String hint, {bool keyboardOpen = false}) {
     final borderColor = isDark ? Colors.white.withOpacity(0.10) : const Color(0xFF3B82F6).withOpacity(0.22);
     final fillColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
 
     return SafeArea(
       top: false,
+      // When keyboard is open we've already shifted the sheet up, so skip bottom safe area
+      bottom: !keyboardOpen,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(14.w, 8.h, 14.w, 14.h),
+        padding: EdgeInsets.fromLTRB(14.w, 8.h, 14.w, keyboardOpen ? 8.h : 14.h),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
