@@ -377,11 +377,9 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     final keyboardHeight = mediaQuery.viewInsets.bottom;
     final screenHeight = mediaQuery.size.height;
 
-    // When keyboard opens, shrink the sheet so the input bar stays visible.
-    // Without keyboard: 84% of screen. With keyboard: fit inside the visible area.
-    final sheetHeight = keyboardHeight > 0
-        ? screenHeight - keyboardHeight - mediaQuery.padding.top
-        : screenHeight * 0.84;
+    // Keep the sheet height fixed at 84% — never shrink when keyboard opens.
+    // Instead, push the input bar up using bottom padding inside the sheet.
+    final sheetHeight = screenHeight * 0.84;
 
     final hintText = isHindi ? 'Kuch puchho...' : 'Ask something...';
     final headerSubtitle = isHindi ? 'Online · intelligent PDF assistant' : 'Online · intelligent PDF assistant';
@@ -411,7 +409,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
             _buildHeader(isDark, theme, isHindi, headerSubtitle),
             Divider(height: 1, color: theme.dividerColor.withOpacity(0.08)),
             _buildMessageList(isDark, theme),
-            _buildInputBar(isDark, theme, hintText),
+            _buildInputBar(isDark, theme, hintText, keyboardHeight),
           ],
         ),
       ),
@@ -653,7 +651,7 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     );
   }
 
-  Widget _buildInputBar(bool isDark, ThemeData theme, String hint) {
+  Widget _buildInputBar(bool isDark, ThemeData theme, String hint, double keyboardHeight) {
     final fillColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFF);
     final borderColor = isDark
         ? const Color(0xFF334155)
@@ -669,11 +667,9 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
           ),
         ),
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(12.w, 10.h, 12.w, 12.h),
-          child: Row(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(12.w, 10.h, 12.w, keyboardHeight > 0 ? keyboardHeight + 8.h : 12.h),
+        child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               // Attach button
@@ -744,7 +740,6 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
             ],
           ),
         ),
-      ),
     );
   }
 }
@@ -839,16 +834,19 @@ class _AnimatedInputFieldState extends State<_AnimatedInputField>
             onSubmitted: (_) => widget.onSend(),
             maxLines: 4,
             minLines: 1,
+            cursorColor: const Color(0xFF3B82F6),
             style: GoogleFonts.inter(
               fontSize: 14.sp,
               height: 1.45,
-              color: widget.theme.colorScheme.onSurface,
+              color: widget.isDark ? Colors.white : const Color(0xFF0F172A),
             ),
             decoration: InputDecoration(
               hintText: widget.hint,
               hintStyle: GoogleFonts.inter(
                 fontSize: 14.sp,
-                color: widget.theme.colorScheme.onSurface.withOpacity(0.36),
+                color: widget.isDark
+                    ? Colors.white.withOpacity(0.38)
+                    : const Color(0xFF0F172A).withOpacity(0.38),
               ),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
