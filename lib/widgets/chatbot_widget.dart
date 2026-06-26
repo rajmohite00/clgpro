@@ -363,17 +363,10 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     final isHindi = settings.isHindi;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final mediaQuery = MediaQuery.of(context);
-    final screenHeight = mediaQuery.size.height;
-    final keyboardHeight = mediaQuery.viewInsets.bottom;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     final hintText = isHindi ? 'Kuch puchho...' : 'Ask something...';
     final headerSubtitle = isHindi ? 'Online · intelligent PDF assistant' : 'Online · intelligent PDF assistant';
-
-    // When keyboard is open, shrink the sheet so the input bar stays visible
-    final sheetHeight = keyboardHeight > 0
-        ? screenHeight - keyboardHeight
-        : screenHeight * 0.84;
 
     return AnimatedBuilder(
       animation: _sheetAnim,
@@ -381,27 +374,32 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
         position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(_sheetAnim),
         child: child,
       ),
-      child: Container(
-        height: sheetHeight,
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF0F172A) : Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.18),
-              blurRadius: 40,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            _buildHandle(isDark),
-            _buildHeader(isDark, theme, isHindi, headerSubtitle),
-            Divider(height: 1, color: theme.dividerColor.withOpacity(0.08)),
-            _buildMessageList(isDark, theme),
-            _buildInputBar(isDark, theme, hintText, keyboardOpen: keyboardHeight > 0),
-          ],
+      // KEY FIX: Padding with viewInsets.bottom pushes the entire sheet
+      // content above the keyboard — the Flutter-idiomatic way.
+      child: Padding(
+        padding: EdgeInsets.only(bottom: keyboardHeight),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.84,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0F172A) : Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 40,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              _buildHandle(isDark),
+              _buildHeader(isDark, theme, isHindi, headerSubtitle),
+              Divider(height: 1, color: theme.dividerColor.withOpacity(0.08)),
+              _buildMessageList(isDark, theme),
+              _buildInputBar(isDark, theme, hintText),
+            ],
+          ),
         ),
       ),
     );
@@ -642,96 +640,213 @@ class _ChatScreenState extends State<_ChatScreen> with SingleTickerProviderState
     );
   }
 
-  Widget _buildInputBar(bool isDark, ThemeData theme, String hint, {bool keyboardOpen = false}) {
-    final borderColor = isDark ? Colors.white.withOpacity(0.10) : const Color(0xFF3B82F6).withOpacity(0.22);
-    final fillColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+  Widget _buildInputBar(bool isDark, ThemeData theme, String hint) {
+    final fillColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFF);
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE2E8F0);
 
-    return SafeArea(
-      top: false,
-      // When keyboard is open we've already shifted the sheet up, so skip bottom safe area
-      bottom: !keyboardOpen,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(14.w, 8.h, 14.w, keyboardOpen ? 8.h : 14.h),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            // File Upload Button
-            GestureDetector(
-              onTap: _pickAndProcessFile,
-              child: Container(
-                margin: EdgeInsets.only(right: 8.w),
-                width: 46.w,
-                height: 46.w,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14.r),
-                  color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
-                ),
-                child: Icon(Icons.attach_file_rounded, color: const Color(0xFFEF4444), size: 22.sp),
-              ),
-            ),
-            // Text field
-            Expanded(
-              child: Container(
-                constraints: BoxConstraints(minHeight: 48.h),
-                decoration: BoxDecoration(
-                  color: fillColor,
-                  borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(color: borderColor, width: 1.2),
-                ),
-                child: TextField(
-                  controller: _inputCtrl,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _sendMessage(),
-                  maxLines: 4,
-                  minLines: 1,
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    height: 1.45,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: hint,
-                    hintStyle: GoogleFonts.inter(
-                      fontSize: 14.sp,
-                      color: theme.colorScheme.onSurface.withOpacity(0.36),
-                    ),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 13.h),
-                    isDense: true,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(width: 8.w),
-            // Send button
-            GestureDetector(
-              onTap: _sendMessage,
-              child: Container(
-                width: 46.w,
-                height: 46.w,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14.r),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [const Color(0xFF60A5FA), const Color(0xFF3B82F6)],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF3B82F6).withOpacity(0.35),
-                      blurRadius: 10.r,
-                      offset: Offset(0, 4.h),
-                    ),
-                  ],
-                ),
-                child: Icon(Icons.send_rounded, color: Colors.white, size: 20.sp),
-              ),
-            ),
-          ],
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06),
+            width: 1,
+          ),
         ),
       ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(12.w, 10.h, 12.w, 12.h),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Attach button
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _pickAndProcessFile,
+                  borderRadius: BorderRadius.circular(12.r),
+                  child: Container(
+                    width: 44.w,
+                    height: 44.w,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12.r),
+                      color: isDark
+                          ? Colors.white.withOpacity(0.08)
+                          : const Color(0xFFFEE2E2),
+                    ),
+                    child: Icon(
+                      Icons.attach_file_rounded,
+                      color: const Color(0xFFEF4444),
+                      size: 20.sp,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 8.w),
+              // Text field with animated border
+              Expanded(
+                child: _AnimatedInputField(
+                  controller: _inputCtrl,
+                  hint: hint,
+                  isDark: isDark,
+                  theme: theme,
+                  fillColor: fillColor,
+                  borderColor: borderColor,
+                  onSend: _sendMessage,
+                ),
+              ),
+              SizedBox(width: 8.w),
+              // Send button
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _sendMessage,
+                  borderRadius: BorderRadius.circular(12.r),
+                  child: Container(
+                    width: 44.w,
+                    height: 44.w,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12.r),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF60A5FA), Color(0xFF2563EB)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF3B82F6).withOpacity(0.4),
+                          blurRadius: 12.r,
+                          offset: Offset(0, 4.h),
+                        ),
+                      ],
+                    ),
+                    child: Icon(Icons.send_rounded, color: Colors.white, size: 18.sp),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ANIMATED INPUT FIELD  (focus-aware glowing border)
+// ═══════════════════════════════════════════════════════════
+class _AnimatedInputField extends StatefulWidget {
+  final TextEditingController controller;
+  final String hint;
+  final bool isDark;
+  final ThemeData theme;
+  final Color fillColor;
+  final Color borderColor;
+  final VoidCallback onSend;
+
+  const _AnimatedInputField({
+    required this.controller,
+    required this.hint,
+    required this.isDark,
+    required this.theme,
+    required this.fillColor,
+    required this.borderColor,
+    required this.onSend,
+  });
+
+  @override
+  State<_AnimatedInputField> createState() => _AnimatedInputFieldState();
+}
+
+class _AnimatedInputFieldState extends State<_AnimatedInputField>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _focusCtrl;
+  late Animation<double> _glowAnim;
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _glowAnim = CurvedAnimation(parent: _focusCtrl, curve: Curves.easeOut);
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus) {
+        _focusCtrl.forward();
+      } else {
+        _focusCtrl.reverse();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusCtrl.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _glowAnim,
+      builder: (_, __) {
+        final isFocused = _focusNode.hasFocus;
+        return Container(
+          constraints: BoxConstraints(minHeight: 46.h),
+          decoration: BoxDecoration(
+            color: widget.fillColor,
+            borderRadius: BorderRadius.circular(14.r),
+            border: Border.all(
+              color: isFocused
+                  ? const Color(0xFF3B82F6).withOpacity(0.7)
+                  : widget.borderColor,
+              width: isFocused ? 1.8 : 1.2,
+            ),
+            boxShadow: isFocused
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF3B82F6).withOpacity(0.15),
+                      blurRadius: 12.r,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : [],
+          ),
+          child: TextField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            textInputAction: TextInputAction.send,
+            onSubmitted: (_) => widget.onSend(),
+            maxLines: 4,
+            minLines: 1,
+            style: GoogleFonts.inter(
+              fontSize: 14.sp,
+              height: 1.45,
+              color: widget.theme.colorScheme.onSurface,
+            ),
+            decoration: InputDecoration(
+              hintText: widget.hint,
+              hintStyle: GoogleFonts.inter(
+                fontSize: 14.sp,
+                color: widget.theme.colorScheme.onSurface.withOpacity(0.36),
+              ),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+              isDense: true,
+            ),
+          ),
+        );
+      },
     );
   }
 }
